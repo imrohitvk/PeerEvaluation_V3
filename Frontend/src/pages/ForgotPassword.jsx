@@ -17,6 +17,7 @@ export default function ForgotPassword() {
         try {
             const res = await axios.post('http://localhost:5000/api/auth/forgot-password', { email });
             setMessage(res.data.message);
+            setTimeout(() => navigate('/login'), 3000);
         } catch (err) {
             setError(err.response?.data?.message || 'Something went wrong');
         } finally {
@@ -62,7 +63,7 @@ export default function ForgotPassword() {
                 </svg>
             </Link>
 
-            {/* Updated Back Button (top-right, black theme) */}
+            {/* Updated Back Button (top-left-right-to-home, black theme) */}
             <button
                 onClick={() => navigate(-1)}
                 style={{

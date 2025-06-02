@@ -12,6 +12,7 @@ import Register from './pages/Register'
 import Homepage from './pages/Homepage'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import ChangePassword from './pages/ChangePassword'
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
         <Route path="/student" element={<StudentDashboard />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/change-password" element={<ChangePassword />} />
       </Routes>
     </Router>
   );

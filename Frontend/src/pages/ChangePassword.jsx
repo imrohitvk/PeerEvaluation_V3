@@ -1,31 +1,46 @@
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
-export default function ResetPassword() {
-    const { token } = useParams();
+export default function ChangePassword() {
     const navigate = useNavigate();
-    const [password, setPassword] = useState('');
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
 
-    const handleReset = async (e) => {
+    const handleChange = async (e) => {
         e.preventDefault();
         setMessage('');
         setError('');
 
-        if (password !== confirmPassword) {
-            setError('Passwords do not match');
+        if (newPassword !== confirmPassword) {
+            setError('New passwords do not match');
             return;
         }
 
+        const token = localStorage.getItem('token');
+
         try {
-            const res = await axios.post(`http://localhost:5000/api/auth/reset-password/${token}`, { password });
-            setMessage(res.data.message);
-            setTimeout(() => navigate('/login'), 3000);
+            const res = await axios.post(
+                'http://localhost:5000/api/auth/change-password',
+                { currentPassword, newPassword },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    },
+                    withCredentials: true
+                }
+            );
+            setMessage(res.data.message || 'Password changed successfully');
+            setTimeout(() => navigate(-1), 1000);
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            setTimeout(() => navigate('/login'), 1000);
+
         } catch (err) {
-            setError(err.response?.data?.message || 'Invalid or expired token');
+            setError(err.response?.data?.message || 'Failed to change password');
         }
     };
 
@@ -43,24 +58,30 @@ export default function ResetPassword() {
             padding: '2rem',
             boxSizing: 'border-box',
         }}>
-            <Link to="/" style={{
-                position: 'absolute',
-                top: 24,
-                left: 24,
-                background: '#fff',
-                borderRadius: '50%',
-                boxShadow: '0 2px 8px rgba(60,60,120,0.10)',
-                width: 40,
-                height: 40,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textDecoration: 'none'
-            }} aria-label="Go to homepage">
+            <button
+                onClick={() => navigate(-1)}
+                style={{
+                    position: 'absolute',
+                    top: 24,
+                    left: 24,
+                    background: '#fff',
+                    borderRadius: '50%',
+                    boxShadow: '0 2px 8px rgba(60,60,120,0.10)',
+                    width: 40,
+                    height: 40,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0
+                }}
+                aria-label="Go back"
+            >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path d="M3 10.5L12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-5h-6v5H4a1 1 0 0 1-1-1V10.5z" stroke="#667eea" strokeWidth="2" strokeLinejoin="round" fill="none"/>
+                    <path d="M15 19l-7-7 7-7" stroke="#667eea" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-            </Link>
+            </button>
 
             <div style={{
                 background: '#fff',
@@ -97,9 +118,9 @@ export default function ResetPassword() {
                     fontWeight: 700,
                     fontSize: '2rem',
                     marginBottom: '0.5rem'
-                }}>Reset Password</h1>
+                }}>Change Password</h1>
 
-                <form onSubmit={handleReset} style={{
+                <form onSubmit={handleChange} style={{
                     width: '100%',
                     display: 'flex',
                     flexDirection: 'column',
@@ -107,16 +128,40 @@ export default function ResetPassword() {
                     marginTop: '1rem'
                 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <label htmlFor="password" style={{
+                        <label htmlFor="currentPassword" style={{
+                            color: '#3f3d56',
+                            fontWeight: 500,
+                            fontSize: '1rem',
+                        }}>Current Password</label>
+                        <input
+                            id="currentPassword"
+                            type="password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            required
+                            style={{
+                                padding: '0.75rem 1rem',
+                                borderRadius: '8px',
+                                border: '1px solid #c3cfe2',
+                                background: '#f7f8fa',
+                                fontSize: '1rem',
+                                outline: 'none',
+                                color: '#222'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <label htmlFor="newPassword" style={{
                             color: '#3f3d56',
                             fontWeight: 500,
                             fontSize: '1rem',
                         }}>New Password</label>
                         <input
-                            id="password"
+                            id="newPassword"
                             type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
                             required
                             style={{
                                 padding: '0.75rem 1rem',
@@ -135,7 +180,7 @@ export default function ResetPassword() {
                             color: '#3f3d56',
                             fontWeight: 500,
                             fontSize: '1rem',
-                        }}>Confirm Password</label>
+                        }}>Confirm New Password</label>
                         <input
                             id="confirmPassword"
                             type="password"
@@ -165,7 +210,7 @@ export default function ResetPassword() {
                         cursor: 'pointer',
                         boxShadow: '0 2px 8px rgba(102,126,234,0.12)'
                     }}>
-                        Reset Password
+                        Change Password
                     </button>
 
                     {message && <p style={{ color: 'green', textAlign: 'center', margin: 0 }}>{message}</p>}
