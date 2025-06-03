@@ -1,12 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUserCircle } from 'react-icons/fa';
+import { showMessage } from '../utils/Message'; // Assuming you have a utility for showing messages
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('home');
   const [user, setUser] = useState({ name: '', email: '', role: '' });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const [instructors, setInstructors] = useState([]);
+  const [courses, setCourses] = useState([]); // New state for courses
+  const [courseDetails, setCourseDetails] = useState({
+      courseId: '',
+      courseName: '',
+      openCourse: false,
+      startDate: '',
+      endDate: ''
+  });
+  const [batchDetails, setBatchDetails] = useState({
+    batchId: '',
+    instructor: '',
+    course: '' // Updated batchDetails state to include course field
+});
 
   useEffect(() => {
     // Remove body background, handled by container now
@@ -44,6 +59,163 @@ export default function AdminDashboard() {
 
   // Responsive sidebar toggle for mobile
   const handleSidebarToggle = () => setSidebarOpen(open => !open);
+
+  // Added functionality to handle the role update request.
+  const handleRoleUpdate = async (event) => {
+    event.preventDefault();
+
+    const email = document.getElementById('email').value;
+    const role = document.getElementById('role').value;
+
+    if (!email || !role) {
+      showMessage('Please provide both email and role.', 'error');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/auth/update-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email, role }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage('Role updated successfully!', 'success');
+      } else {
+        showMessage(`Error! ${data.message || 'Failed to update role.'}`, 'error');
+      }
+    } catch (error) {
+      showMessage('An error occurred while updating the role.', 'error');
+      console.error(error);
+    }
+  };
+
+useEffect(() => {
+  const fetchInstructors = async () => {
+      try {
+          const token = localStorage.getItem('token');
+          const response = await fetch('http://localhost:5000/api/auth/teachers', {
+            method: 'GET',
+              headers: {
+                  Authorization: `Bearer ${token}`,
+              },
+          });
+          const data = await response.json();
+          setInstructors(data);
+      } catch (error) {
+          console.error('Failed to fetch instructors:', error);
+      }
+  };
+
+  fetchInstructors();
+}, []);
+
+useEffect(() => {
+  const fetchCourses = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/auth/courses', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      // Map backend fields to expected frontend fields
+      const mappedCourses = Array.isArray(data)
+        ? data.map(course => ({
+            id: course._id || course.id,
+            name: course.courseName || course.name,
+          }))
+        : [];
+      setCourses(mappedCourses);
+    } catch (error) {
+      console.error('Failed to fetch courses:', error);
+    }
+  };
+
+  fetchCourses();
+}, []);
+
+const handleCourseSubmit = async (event) => {
+  event.preventDefault();
+
+  // Prepare the course data to send (ensure correct field names)
+  const courseData = {
+    courseId: courseDetails.courseId,
+    courseName: courseDetails.courseName,
+    openCourse: courseDetails.openCourse,
+    startDate: courseDetails.startDate,
+    endDate: courseDetails.endDate,
+  };
+
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:5000/api/auth/add-course', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(courseData),
+    });
+
+    if (response.ok) {
+      showMessage('Course added successfully!', 'success');
+      setCourseDetails({
+        courseId: '',
+        courseName: '',
+        openCourse: false,
+        startDate: '',
+        endDate: ''
+      });
+    } else {
+      const data = await response.json();
+      showMessage(`Error: ${data.message || 'Failed to add course.'}`, 'error');
+    }
+  } catch (error) {
+    showMessage('An error occurred while adding the course.', 'error');
+    console.error(error);
+  }
+};
+
+const handleBatchSubmit = async (event) => {
+    event.preventDefault();
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:5000/api/auth/add-batch', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(batchDetails),
+        });
+
+        if (response.ok) {
+            showMessage('Batch added successfully!', 'success');
+            setBatchDetails({
+                batchId: '',
+                instructor: '',
+                course: '' // Reset course field
+            });
+        } else {
+            const data = await response.json();
+            showMessage(`Error: ${data.message || 'Failed to add batch.'}`, 'error');
+        }
+    } catch (error) {
+        showMessage('An error occurred while adding the batch.', 'error');
+        console.error(error);
+    }
+};
+
 
   return (
     <div
@@ -120,6 +292,7 @@ export default function AdminDashboard() {
             <button onClick={() => setActiveTab('home')} style={buttonStyle(activeTab === 'home')}>🏠 Home</button>
             <button onClick={() => setActiveTab('role')} style={buttonStyle(activeTab === 'role')}>🧑‍💼 Role Manager</button>
             <button onClick={() => setActiveTab('course')} style={buttonStyle(activeTab === 'course')}>📚 Add Course</button>
+            <button onClick={() => setActiveTab('batch')} style={buttonStyle(activeTab === 'batch')}>➕ Add Batch</button>
             <button onClick={logout} style={{ marginTop: 'auto', ...buttonStyle(false) }}>🚪 Logout</button>
           </>
         )}
@@ -183,19 +356,310 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
-
           {activeTab === 'role' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
               <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Role Manager</h2>
-              <p style={{ color: '#3f3d56' }}>Implement role update functionality here.</p>
+              <p style={{ color: '#3f3d56' }}>Update the role of a user by providing their email ID and selecting a role.</p>
+              <form onSubmit={handleRoleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="email">Email ID</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="Enter user email ID"
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '12px',
+                      border: '1px solid  #5c5470',
+                      fontSize: '1rem',
+                      width: '300px', // Reduced width
+                      boxSizing: 'border-box',
+                      background: '#ffffff',
+                      color: ' #4b3c70', // Ensured text color is black
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="role">Select Role:</label>
+                  <select
+                    id="role"
+                    name="role"
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '12px',
+                      border: '1px solid #5c5470',
+                      fontSize: '1rem',
+                      width: '300px', // Reduced width
+                      boxSizing: 'border-box',
+                      background: '#ffffff',
+                      color: ' #4b3c70', // Ensured text color is black
+                    }}
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="student">Student</option>
+                    <option value="ta">TA</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', width: '100%', marginLeft: '150px' }}>
+                  <button
+                    type="submit"
+                    style={{
+                      background: '#5c5470',
+                      border: 'none',
+                      color: '#fff',
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
+                      transition: 'background 0.2s',
+                    }}
+                  >
+                    Update Role
+                  </button>
+                </div>
+              </form>
             </div>
           )}
+          
           {activeTab === 'course' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
-              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Add New Course</h2>
-              <p style={{ color: '#3f3d56' }}>Implement course creation form here.</p>
-            </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
+                  <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Add New Course</h2>
+                  <form onSubmit={handleCourseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="courseId">Course ID</label>
+                          <input
+                              type="text"
+                              id="courseId"
+                              name="courseId"
+                              placeholder="Enter course ID"
+                              value={courseDetails.courseId}
+                              onChange={(e) => setCourseDetails({ ...courseDetails, courseId: e.target.value })}
+                              style={{
+                                  padding: '0.5rem',
+                                  borderRadius: '12px',
+                                  border: '1px solid  #5c5470',
+                                  fontSize: '1rem',
+                                  width: '300px',
+                                  boxSizing: 'border-box',
+                                  background: '#ffffff',
+                                  color: ' #4b3c70',
+                              }}
+                          />
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="courseName">Course Name</label>
+                          <input
+                              type="text"
+                              id="courseName"
+                              name="courseName"
+                              placeholder="Enter course name"
+                              value={courseDetails.courseName}
+                              onChange={(e) => setCourseDetails({ ...courseDetails, courseName: e.target.value })}
+                              style={{
+                                  padding: '0.5rem',
+                                  borderRadius: '12px',
+                                  border: '1px solid  #5c5470',
+                                  fontSize: '1rem',
+                                  width: '300px',
+                                  boxSizing: 'border-box',
+                                  background: '#ffffff',
+                                  color: ' #4b3c70',
+                              }}
+                          />
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="openCourse">Open Course</label>
+                          <input
+                              type="checkbox"
+                              id="openCourse"
+                              name="openCourse"
+                              checked={courseDetails.openCourse || false}
+                              onChange={(e) => setCourseDetails({ ...courseDetails, openCourse: e.target.checked })}
+                              style={{
+                                  width: '20px',
+                                  height: '20px',
+                                  cursor: 'pointer',
+                                  background: '#f0f0f0',
+                                  border: '1px solid #5c5470',
+                                  borderRadius: '4px',
+                              }}
+                          />
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="startDate">Course Start Date</label>
+                          <input
+                              type="date"
+                              id="startDate"
+                              name="startDate"
+                              value={courseDetails.startDate || ''}
+                              onChange={(e) => setCourseDetails({ ...courseDetails, startDate: e.target.value })}
+                              style={{
+                                  padding: '0.5rem',
+                                  borderRadius: '12px',
+                                  border: '1px solid  #5c5470',
+                                  fontSize: '1rem',
+                                  width: '300px',
+                                  boxSizing: 'border-box',
+                                  background: '#ffffff',
+                                  color: ' #4b3c70',
+                                  position: 'relative',
+                                  zIndex: 9999,
+                              }}
+                          />
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="endDate">Course End Date</label>
+                          <input
+                              type="date"
+                              id="endDate"
+                              name="endDate"
+                              value={courseDetails.endDate || ''}
+                              onChange={(e) => setCourseDetails({ ...courseDetails, endDate: e.target.value })}
+                              style={{
+                                  padding: '0.5rem',
+                                  borderRadius: '12px',
+                                  border: '1px solid  #5c5470',
+                                  fontSize: '1rem',
+                                  width: '300px',
+                                  boxSizing: 'border-box',
+                                  background: '#ffffff',
+                                  color: ' #4b3c70',
+                                  position: 'relative',
+                                  zIndex: 9999,
+                              }}
+                          />
+                      </div>
+
+                      <div style={{ display: 'flex', width: '100%', marginLeft: '150px' }}>
+                          <button
+                              type="submit"
+                              style={{
+                                  background: '#5c5470',
+                                  border: 'none',
+                                  color: '#fff',
+                                  fontWeight: 600,
+                                  fontSize: '1rem',
+                                  padding: '0.5rem 1rem',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
+                                  transition: 'background 0.2s',
+                              }}
+                          >
+                              Add Course
+                          </button>
+                      </div>
+                  </form>
+              </div>
           )}
+          {activeTab === 'batch' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Add New Batch</h2>
+                <form onSubmit={handleBatchSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="batchId">Batch ID</label>
+                        <input
+                            type="text"
+                            id="batchId"
+                            name="batchId"
+                            placeholder="Enter batch ID"
+                            value={batchDetails.batchId}
+                            onChange={(e) => setBatchDetails({ ...batchDetails, batchId: e.target.value })}
+                            style={{
+                                padding: '0.5rem',
+                                borderRadius: '12px',
+                                border: '1px solid  #5c5470',
+                                fontSize: '1rem',
+                                width: '300px',
+                                boxSizing: 'border-box',
+                                background: '#ffffff',
+                                color: ' #4b3c70',
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="instructor">Instructor</label>
+                        <select
+                            id="instructor"
+                            name="instructor"
+                            value={batchDetails.instructor}
+                            onChange={(e) => setBatchDetails({ ...batchDetails, instructor: e.target.value })}
+                            style={{
+                                padding: '0.5rem',
+                                borderRadius: '12px',
+                                border: '1px solid #5c5470',
+                                fontSize: '1rem',
+                                width: '300px',
+                                boxSizing: 'border-box',
+                                background: '#ffffff',
+                                color: ' #4b3c70',
+                            }}
+                        >
+                            <option value="">Select Instructor</option>
+                            {instructors.map((instructor) => (
+                                <option key={instructor.id} value={instructor.id}>{instructor.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="course">Course</label>
+                        <select
+                          id="course"
+                          name="course"
+                          value={batchDetails.course}
+                          onChange={(e) => setBatchDetails({ ...batchDetails, course: e.target.value })}
+                          style={{
+                            padding: '0.5rem',
+                            borderRadius: '12px',
+                            border: '1px solid #5c5470',
+                            fontSize: '1rem',
+                            width: '300px',
+                            boxSizing: 'border-box',
+                            background: '#ffffff',
+                            color: ' #4b3c70',
+                          }}
+                        >
+                          <option value="">Select Course</option>
+                          {courses.map((course) => (
+                            <option key={course.id} value={course.id}>{course.name}</option>
+                          ))}
+                        </select>
+                    </div>
+
+                    <div style={{ display: 'flex', width: '100%', marginLeft: '150px' }}>
+                        <button
+                            type="submit"
+                            style={{
+                                background: '#5c5470',
+                                border: 'none',
+                                color: '#fff',
+                                fontWeight: 600,
+                                fontSize: '1rem',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
+                                transition: 'background 0.2s',
+                            }}
+                        >
+                            Add Batch
+                        </button>
+                    </div>
+                </form>
+            </div>
+        )}
         </div>
       </main>
 

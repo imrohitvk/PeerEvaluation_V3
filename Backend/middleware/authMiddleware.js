@@ -19,3 +19,11 @@ export const protect = async (req, res, next) => {
     res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
+
+// Added middleware to allow both admin and teacher roles to access the route.
+export const adminOrTeacherOnly = (req, res, next) => {
+  if (req.user.role === 'admin' || req.user.role === 'teacher') {
+    return next();
+  }
+  return res.status(403).json({ message: 'Access denied. Admins or Teachers only.' });
+};

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FaEyeSlash, FaEye } from 'react-icons/fa';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios'; // Import axios for HTTP requests
+import { showMessage } from '../utils/Message'; // Assuming you have a utility for showing messages
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -32,7 +33,7 @@ export default function Login() {
             else if (role === 'ta') navigate('/ta');
             else navigate('/student');
         } catch (err) {
-            alert('Login failed. Please check your credentials.');
+            showMessage('Login failed. Please check your credentials.', 'error');
             console.error(err);
         } finally {
             setLoading(false);

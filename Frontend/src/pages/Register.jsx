@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import axios from 'axios'; // commented out since we're not connecting yet
+import { showMessage } from '../utils/Message';
 
 export default function Register() {
     const [email, setEmail] = useState('');
@@ -32,7 +33,7 @@ export default function Register() {
                 else if (userRole === 'ta') navigate('/ta');
                 else navigate('/student');
             } catch (err) {
-                alert(err.response?.data?.message || 'Registration failed');
+                showMessage(err.response?.data?.message || 'Registration failed');
                 console.error(err);
             }
     };
