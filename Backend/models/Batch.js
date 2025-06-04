@@ -1,10 +1,12 @@
 import mongoose from 'mongoose';
-// This code defines a Mongoose schema for a Batch model in a Node.js application.
 
 const BatchSchema = new mongoose.Schema({
-    batch_id: { type: String, required: true, unique: true },
+    batchId: { type: String, required: true },
     instructor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    course_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
+    course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
 });
+
+// Compound unique index on batchId and course
+BatchSchema.index({ batchId: 1, course: 1 }, { unique: true });
 
 export const Batch = mongoose.model('Batch', BatchSchema);

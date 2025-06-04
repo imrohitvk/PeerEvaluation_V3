@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUserCircle } from 'react-icons/fa';
+import { FaUserCircle, FaChalkboardTeacher, FaBook, FaUserGraduate } from 'react-icons/fa';
 import { showMessage } from '../utils/Message'; // Assuming you have a utility for showing messages
+import { AppContext } from '../utils/AppContext';
+import { useContext } from 'react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('home');
@@ -22,6 +24,8 @@ export default function AdminDashboard() {
     instructor: '',
     course: '' // Updated batchDetails state to include course field
 });
+  const [counts, setCounts] = useState({ teachers: 0, courses: 0, students: 0 });
+  const { setRefreshApp } = useContext(AppContext);
 
   useEffect(() => {
     // Remove body background, handled by container now
@@ -87,6 +91,10 @@ export default function AdminDashboard() {
 
       if (response.ok) {
         showMessage('Role updated successfully!', 'success');
+        // Optionally, you can reset the form fields after successful update
+        document.getElementById('email').value = '';
+        document.getElementById('role').value = '';
+        setTimeout(() => setRefreshApp(true), 1000); // Adds a 1-second delay before refreshing the app
       } else {
         showMessage(`Error! ${data.message || 'Failed to update role.'}`, 'error');
       }
@@ -186,35 +194,63 @@ const handleCourseSubmit = async (event) => {
 };
 
 const handleBatchSubmit = async (event) => {
-    event.preventDefault();
+  event.preventDefault();
 
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5000/api/auth/add-batch', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(batchDetails),
-        });
+  // Prepare the batch data to send (ensure correct field names)
+  const batchData = {
+    batchId: batchDetails.batchId,
+    instructor: batchDetails.instructor,
+    course: batchDetails.course,
+  };
 
-        if (response.ok) {
-            showMessage('Batch added successfully!', 'success');
-            setBatchDetails({
-                batchId: '',
-                instructor: '',
-                course: '' // Reset course field
-            });
-        } else {
-            const data = await response.json();
-            showMessage(`Error: ${data.message || 'Failed to add batch.'}`, 'error');
-        }
-    } catch (error) {
-        showMessage('An error occurred while adding the batch.', 'error');
-        console.error(error);
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:5000/api/auth/add-batch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(batchData),
+    });
+
+    if (response.ok) {
+      showMessage('Batch added successfully!', 'success');
+      setBatchDetails({
+        batchId: '',
+        instructor: '',
+        course: '' // Reset course field
+      });
+    } else {
+      const data = await response.json();
+      showMessage(`Error! ${data.message || 'Failed to add batch.'}`, 'error');
     }
+  } catch (error) {
+    showMessage('An error occurred while adding the batch.', 'error');
+    console.error(error);
+  }
 };
+
+useEffect(() => {
+  const fetchCounts = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/auth/dashboard-counts', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setCounts(data);
+    } catch (error) {
+      console.error('Error fetching dashboard counts:', error);
+    }
+  };
+  if (activeTab === 'home') {
+      fetchCounts();
+    }
+}, [activeTab]);
 
 
   return (
@@ -322,8 +358,25 @@ const handleBatchSubmit = async (event) => {
           padding: '3rem 4rem',
         }}>
           {activeTab === 'home' && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#3f3d56' }}>
-              <h2>Welcome to the Admin Dashboard</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', color: '#3f3d56' }}>
+              <h2 style={{ marginBottom: '2rem' }}>Welcome to the Admin Dashboard</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-around', width: '100%' }}>
+                <div style={{ textAlign: 'center', padding: '1rem', borderRadius: '12px', background: 'linear-gradient(135deg, #667eea, #764ba2)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '200px', color: '#fff' }}>
+                  <FaChalkboardTeacher size={40} style={{ marginBottom: '0.5rem' }} />
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Teachers</h3>
+                  <p style={{ fontSize: '1.2rem' }}>{counts.teachers}</p>
+                </div>
+                <div style={{ textAlign: 'center', padding: '1rem', borderRadius: '12px', background: 'linear-gradient(135deg, #32cd32, #125e12)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '200px', color: '#fff' }}>
+                  <FaBook size={40} style={{ marginBottom: '0.5rem' }} />
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Courses</h3>
+                  <p style={{ fontSize: '1.2rem' }}>{counts.courses}</p>
+                </div>
+                <div style={{ textAlign: 'center', padding: '1rem', borderRadius: '12px', background: 'linear-gradient(135deg, #43cea2, #185a9d)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '200px', color: '#fff' }}>
+                  <FaUserGraduate size={40} style={{ marginBottom: '0.5rem' }} />
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Students</h3>
+                  <p style={{ fontSize: '1.2rem' }}>{counts.students}</p>
+                </div>
+              </div>
             </div>
           )}
           {activeTab === 'profile' && (
@@ -813,7 +866,7 @@ function ProfileMenu({ user, onLogout, onProfile }) {
         }}
         aria-label="Profile menu"
       >
-        <FaUserCircle size={38} color="#4a4e69" />
+        <FaUserCircle size={38} color=" #4a4e69" />
       </button>
       {open && (
         <div style={{

@@ -13,8 +13,19 @@ import Homepage from './pages/Homepage'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import ChangePassword from './pages/ChangePassword'
+import { useContext, useEffect } from 'react'
+import { AppContext } from './utils/AppContext'
 
 function App() {
+  const { refreshApp } = useContext(AppContext);
+
+  useEffect(() => {
+    if (refreshApp) {
+      window.location.reload(); // Refresh the app
+      setRefreshApp(false);
+    }
+  }, [refreshApp]);
+
   return (
     <Router>
       <Routes>

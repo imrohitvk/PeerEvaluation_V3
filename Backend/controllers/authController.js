@@ -5,6 +5,8 @@ import crypto from 'crypto';
 import { User } from '../models/User.js';
 import sendEmail from '../utils/sendEmail.js';
 import { Course } from '../models/Course.js';
+import emailExistence from 'email-existence';
+import { Batch } from '../models/Batch.js';
 
 // Generate JWT token
 const generateToken = (id, role) => {
@@ -21,6 +23,18 @@ export const registerUser = async (req, res) => {
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ message: 'User already exists.' });
+    }
+
+    // Verify email existence
+    const emailIsValid = await new Promise((resolve) => {
+      emailExistence.check(email, (err, exists) => {
+        if (err) resolve(false);
+        else resolve(exists);
+      });
+    });
+
+    if (!emailIsValid) {
+      return res.status(400).json({ message: 'Email address does not exist or is invalid.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -270,5 +284,59 @@ export const getCourses = async (req, res) => {
   } catch (error) {
     console.error('Error fetching courses:', error);
     res.status(500).json({ message: 'Server error while fetching courses' });
+  }
+};
+
+export const addBatch = async (req, res) => {
+  const { batchId, instructor, course } = req.body;
+
+  if (!batchId || !instructor || !course) {
+    return res.status(400).json({ message: 'All fields are required.' });
+  }
+
+  try {
+    // Find the instructor's ObjectId based on the name
+    const instructorData = await User.findOne({ name: instructor, role: 'teacher' });
+    if (!instructorData) {
+      return res.status(404).json({ message: 'Instructor not found.' });
+    }
+
+    // Check for existing batch with same batchId and course combination
+    const batchExists = await Batch.findOne({ batchId, course });
+    if (batchExists) {
+      return res.status(400).json({ message: 'Batch with this ID already exists for the selected course.' });
+    }
+
+    const newBatch = new Batch({
+      batchId,
+      instructor: instructorData._id, // Use the ObjectId of the instructor
+      course,
+    });
+
+    await newBatch.save();
+
+    res.status(201).json({ message: 'Batch added successfully.', batch: newBatch });
+  } catch (error) {
+    console.error('Error adding batch:', error);
+    res.status(500).json({ message: 'Server error. Please try again later.' });
+  }
+};
+
+export const getDashboardCounts = async (req, res) => {
+  try {
+    const [teacherCount, courseCount, studentCount] = await Promise.all([
+      User.countDocuments({ role: 'teacher' }),
+      Course.countDocuments(),
+      User.countDocuments({ role: 'student' })
+    ]);
+
+    res.status(200).json({
+      teachers: teacherCount,
+      courses: courseCount,
+      students: studentCount,
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard counts:', error);
+    res.status(500).json({ error: 'Internal server error.' });
   }
 };
