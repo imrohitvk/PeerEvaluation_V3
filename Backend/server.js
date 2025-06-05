@@ -26,6 +26,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js"; // Uncomment when admin routes are implemented
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.get("/", (req, res) => {
     res.send("API is running...");
 });
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes); // Uncomment when admin routes are implemented
 
 // Connect to DB and start server
 const startServer = async () => {

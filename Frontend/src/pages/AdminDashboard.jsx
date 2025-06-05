@@ -78,7 +78,7 @@ export default function AdminDashboard() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/auth/update-role', {
+      const response = await fetch('http://localhost:5000/api/admin/update-role', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ useEffect(() => {
   const fetchInstructors = async () => {
       try {
           const token = localStorage.getItem('token');
-          const response = await fetch('http://localhost:5000/api/auth/teachers', {
+          const response = await fetch('http://localhost:5000/api/admin/teachers', {
             method: 'GET',
               headers: {
                   Authorization: `Bearer ${token}`,
@@ -128,7 +128,7 @@ useEffect(() => {
   const fetchCourses = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/auth/courses', {
+      const response = await fetch('http://localhost:5000/api/admin/courses', {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -165,7 +165,7 @@ const handleCourseSubmit = async (event) => {
 
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5000/api/auth/add-course', {
+    const response = await fetch('http://localhost:5000/api/admin/add-course', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -183,6 +183,7 @@ const handleCourseSubmit = async (event) => {
         startDate: '',
         endDate: ''
       });
+      setTimeout(() => setRefreshApp(true), 1000); // Adds a 1-second delay before refreshing the app
     } else {
       const data = await response.json();
       showMessage(`Error: ${data.message || 'Failed to add course.'}`, 'error');
@@ -205,7 +206,7 @@ const handleBatchSubmit = async (event) => {
 
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5000/api/auth/add-batch', {
+    const response = await fetch('http://localhost:5000/api/admin/add-batch', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -221,6 +222,7 @@ const handleBatchSubmit = async (event) => {
         instructor: '',
         course: '' // Reset course field
       });
+      setTimeout(() => setRefreshApp(true), 1000); // Adds a 1-second delay before refreshing the app
     } else {
       const data = await response.json();
       showMessage(`Error! ${data.message || 'Failed to add batch.'}`, 'error');
@@ -235,7 +237,7 @@ useEffect(() => {
   const fetchCounts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/auth/dashboard-counts', {
+      const response = await fetch('http://localhost:5000/api/admin/dashboard-counts', {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -327,8 +329,8 @@ useEffect(() => {
           <>
             <button onClick={() => setActiveTab('home')} style={buttonStyle(activeTab === 'home')}>🏠 Home</button>
             <button onClick={() => setActiveTab('role')} style={buttonStyle(activeTab === 'role')}>🧑‍💼 Role Manager</button>
-            <button onClick={() => setActiveTab('course')} style={buttonStyle(activeTab === 'course')}>📚 Add Course</button>
-            <button onClick={() => setActiveTab('batch')} style={buttonStyle(activeTab === 'batch')}>➕ Add Batch</button>
+            <button onClick={() => setActiveTab('course')} style={buttonStyle(activeTab === 'course')}>📚 Course Manager</button>
+            <button onClick={() => setActiveTab('batch')} style={buttonStyle(activeTab === 'batch')}>➕ Batch Manager</button>
             <button onClick={logout} style={{ marginTop: 'auto', ...buttonStyle(false) }}>🚪 Logout</button>
           </>
         )}

@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUserCircle } from 'react-icons/fa';
+import { showMessage } from '../utils/Message'; // Assuming you have a utility for showing messages
+import { AppContext } from '../utils/AppContext';
+import { useContext } from 'react';
 
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState('home');
   const [user, setUser] = useState({ name: '', email: '', role: '' });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [coursesAndBatches, setCoursesAndBatches] = useState([]);
   const navigate = useNavigate();
+  const { setRefreshApp } = useContext(AppContext);
 
   useEffect(() => {
     // Remove body background, handled by container now
@@ -36,6 +41,26 @@ export default function TeacherDashboard() {
       .catch(() => navigate('/login'));
   }, [navigate]);
 
+  useEffect(() => {
+    const fetchCoursesAndBatches = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:5000/api/auth/teacher-courses-batches', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        setCoursesAndBatches(data);
+      } catch (error) {
+        console.error('Failed to fetch courses and batches:', error);
+      }
+    };
+
+    fetchCoursesAndBatches();
+  }, []);
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
@@ -43,6 +68,47 @@ export default function TeacherDashboard() {
   };
 
   const handleSidebarToggle = () => setSidebarOpen(open => !open);
+  
+  // Added functionality to handle the role update request.
+  const handleRoleUpdate = async (event) => {
+    event.preventDefault();
+
+    const email = document.getElementById('email').value;
+    const role = document.getElementById('role').value;
+
+    if (!email || !role) {
+      showMessage('Please provide both email and role.', 'error');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/auth/update-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email, role }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage('Role updated successfully!', 'success');
+        // Optionally, you can reset the form fields after successful update
+        document.getElementById('email').value = '';
+        document.getElementById('role').value = '';
+        setTimeout(() => setRefreshApp(true), 1000); // Adds a 1-second delay before refreshing the app
+      } else {
+        showMessage(`Error! ${data.message || 'Failed to update role.'}`, 'error');
+      }
+    } catch (error) {
+      showMessage('An error occurred while updating the role.', 'error');
+      console.error(error);
+    }
+  };
+
 
   return (
     <div
@@ -118,7 +184,7 @@ export default function TeacherDashboard() {
           <>
             <button onClick={() => setActiveTab('home')} style={buttonStyle(activeTab === 'home')}>🏠 Home</button>
             <button onClick={() => setActiveTab('role')} style={buttonStyle(activeTab === 'role')}>🧑‍💼 Role Manager</button>
-            <button onClick={() => setActiveTab('course')} style={buttonStyle(activeTab === 'course')}>📚 Add Course</button>
+            <button onClick={() => setActiveTab('course')} style={buttonStyle(activeTab === 'course')}>📚 Courses</button>
             <button onClick={logout} style={{ marginTop: 'auto', ...buttonStyle(false) }}>🚪 Logout</button>
           </>
         )}
@@ -185,14 +251,105 @@ export default function TeacherDashboard() {
 
           {activeTab === 'role' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
-              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Role Manager</h2>
-              <p style={{ color: '#3f3d56' }}>Implement role update functionality here.</p>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Role Manager</h2>
+              <p style={{ color: '#3f3d56' }}>Update the role of a user by providing their email ID and selecting a role.</p>
+              <form onSubmit={handleRoleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="email">Email ID</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="Enter user email ID"
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '12px',
+                      border: '1px solid #5c5470',
+                      fontSize: '1rem',
+                      width: '300px',
+                      boxSizing: 'border-box',
+                      background: '#ffffff',
+                      color: ' #4b3c70',
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="role">Role</label>
+                  <select
+                    id="role"
+                    name="role"
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '12px',
+                      border: '1px solid #5c5470',
+                      fontSize: '1rem',
+                      width: '300px',
+                      boxSizing: 'border-box',
+                      background: '#ffffff',
+                      color: ' #4b3c70',
+                    }}
+                  >
+                    {/* <option value="admin">Admin</option> */}
+                    {/* <option value="teacher">Teacher</option> */}
+                    <option value="student">Student</option>
+                    <option value="ta">TA</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', width: '100%', marginLeft: '150px' }}>
+                  <button
+                    type="submit"
+                    style={{
+                      background: '#5c5470',
+                      border: 'none',
+                      color: '#fff',
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
+                      transition: 'background 0.2s',
+                    }}
+                  >
+                    Update Role
+                  </button>
+                </div>
+              </form>
             </div>
           )}
           {activeTab === 'course' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
-              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Add New Course</h2>
-              <p style={{ color: '#3f3d56' }}>Implement course creation form here.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559', width: '100%' }}>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Courses and Batches</h2>
+              {coursesAndBatches.length > 0 ? (
+                coursesAndBatches.map((course) => (
+                  <div key={course.id} style={{ marginBottom: '1.5rem', width: '100%' }}>
+                    <h3 style={{ color: '#3f3d56', fontWeight: 'bold', marginBottom: '1rem' }}>{course.name}</h3>
+                    <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor={`batch-${course.id}`}>Select Batch</label>
+                    <select
+                      id={`batch-${course.id}`}
+                      style={{
+                        padding: '0.5rem',
+                        borderRadius: '12px',
+                        border: '1px solid #5c5470',
+                        fontSize: '1rem',
+                        width: '300px',
+                        boxSizing: 'border-box',
+                        background: '#ffffff',
+                        color: ' #4b3c70',
+                      }}
+                    >
+                      <option value="">Select Batch</option>
+                      {course.batches.map((batch) => (
+                        <option key={batch.id} value={batch.id}>{batch.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))
+              ) : (
+                <p style={{ color: '#3f3d56', fontSize: '1.2rem' }}>No courses or batches available.</p>
+              )}
             </div>
           )}
         </div>
