@@ -26,6 +26,11 @@ export default function AdminDashboard() {
 });
   const [counts, setCounts] = useState({ teachers: 0, courses: 0, students: 0 });
   const { setRefreshApp } = useContext(AppContext);
+  const [courseId, setCourseId] = useState('');
+  const [selectedBatchId, setSelectedBatchId] = useState('');
+  const [batches, setBatches] = useState([]);
+
+
 
   useEffect(() => {
     // Remove body background, handled by container now
@@ -139,6 +144,7 @@ useEffect(() => {
       const mappedCourses = Array.isArray(data)
         ? data.map(course => ({
             id: course._id || course.id,
+            courseId: course.courseId,
             name: course.courseName || course.name,
           }))
         : [];
@@ -150,6 +156,31 @@ useEffect(() => {
 
   fetchCourses();
 }, []);
+
+useEffect(() => {
+  const fetchBatches = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/admin/batches', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setBatches(data);
+      } else {
+        console.error('Failed to fetch batches:', data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching batches:', error);
+    }
+  };
+
+  fetchBatches();
+}, []);
+
 
 const handleCourseSubmit = async (event) => {
   event.preventDefault();
@@ -183,7 +214,7 @@ const handleCourseSubmit = async (event) => {
         startDate: '',
         endDate: ''
       });
-      setTimeout(() => setRefreshApp(true), 1000); // Adds a 1-second delay before refreshing the app
+      setTimeout(() => setRefreshApp(true), 500); // Adds a 500ms delay before refreshing the app
     } else {
       const data = await response.json();
       showMessage(`Error: ${data.message || 'Failed to add course.'}`, 'error');
@@ -191,6 +222,41 @@ const handleCourseSubmit = async (event) => {
   } catch (error) {
     showMessage('An error occurred while adding the course.', 'error');
     console.error(error);
+  }
+};
+
+const handleCourseDelete = async (event) => {
+  event.preventDefault();
+  // console.log('Selected courseId:', courseId); // Debugging
+  const courseData = {
+    courseId: courseId,
+  };
+
+  if (!courseData.courseId) {
+    showMessage('Please select a course to delete.', 'error');
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:5000/api/admin/delete-course/${courseData.courseId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      showMessage(data.message, 'success');
+      setCourses(courses.filter(course => course.id !== courseData.courseId));
+    } else {
+      const data = await response.json();
+      showMessage(`Error: ${data.message || 'Failed to delete course.'}`, 'error');
+    }
+  } catch (error) {
+    showMessage('An error occurred while deleting the course.', 'error');
+    // console.error(error);
   }
 };
 
@@ -222,7 +288,7 @@ const handleBatchSubmit = async (event) => {
         instructor: '',
         course: '' // Reset course field
       });
-      setTimeout(() => setRefreshApp(true), 1000); // Adds a 1-second delay before refreshing the app
+      setTimeout(() => setRefreshApp(true), 500); // Adds a 500ms delay before refreshing the app
     } else {
       const data = await response.json();
       showMessage(`Error! ${data.message || 'Failed to add batch.'}`, 'error');
@@ -232,6 +298,36 @@ const handleBatchSubmit = async (event) => {
     console.error(error);
   }
 };
+
+const handleBatchDelete = async () => {
+  // console.log('Selected batchId:', selectedBatchId); // Debugging
+  if (!selectedBatchId) {
+    showMessage('Please select a batch to delete.', 'error');
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:5000/api/admin/delete-batch/${selectedBatchId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      showMessage(data.message, 'success');
+      setBatches(batches.filter(batch => batch._id !== selectedBatchId));
+      setSelectedBatchId('');
+    } else {
+      showMessage(data.message || 'Failed to delete batch.', 'error');
+    }
+  } catch (error) {
+    showMessage('An error occurred while deleting the batch.', 'error');
+  }
+};
+
 
 useEffect(() => {
   const fetchCounts = async () => {
@@ -330,7 +426,7 @@ useEffect(() => {
             <button onClick={() => setActiveTab('home')} style={buttonStyle(activeTab === 'home')}>🏠 Home</button>
             <button onClick={() => setActiveTab('role')} style={buttonStyle(activeTab === 'role')}>🧑‍💼 Role Manager</button>
             <button onClick={() => setActiveTab('course')} style={buttonStyle(activeTab === 'course')}>📚 Course Manager</button>
-            <button onClick={() => setActiveTab('batch')} style={buttonStyle(activeTab === 'batch')}>➕ Batch Manager</button>
+            <button onClick={() => setActiveTab('batch')} style={buttonStyle(activeTab === 'batch')}>📘 Batch Manager</button>
             <button onClick={logout} style={{ marginTop: 'auto', ...buttonStyle(false) }}>🚪 Logout</button>
           </>
         )}
@@ -359,6 +455,7 @@ useEffect(() => {
           display: 'block',
           padding: '3rem 4rem',
         }}>
+
           {activeTab === 'home' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', color: '#3f3d56' }}>
               <h2 style={{ marginBottom: '2rem' }}>Welcome to the Admin Dashboard</h2>
@@ -381,6 +478,7 @@ useEffect(() => {
               </div>
             </div>
           )}
+
           {activeTab === 'profile' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559', height: '100%' }}>
               <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Profile</h2>
@@ -411,6 +509,7 @@ useEffect(() => {
               </div>
             </div>
           )}
+
           {activeTab === 'role' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
               <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Role Manager</h2>
@@ -482,154 +581,21 @@ useEffect(() => {
             </div>
           )}
           
+          {/* Add a Delete Course section aligned to the right */}
           {activeTab === 'course' && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
-                  <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Add New Course</h2>
-                  <form onSubmit={handleCourseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="courseId">Course ID</label>
-                          <input
-                              type="text"
-                              id="courseId"
-                              name="courseId"
-                              placeholder="Enter course ID"
-                              value={courseDetails.courseId}
-                              onChange={(e) => setCourseDetails({ ...courseDetails, courseId: e.target.value })}
-                              style={{
-                                  padding: '0.5rem',
-                                  borderRadius: '12px',
-                                  border: '1px solid  #5c5470',
-                                  fontSize: '1rem',
-                                  width: '300px',
-                                  boxSizing: 'border-box',
-                                  background: '#ffffff',
-                                  color: ' #4b3c70',
-                              }}
-                          />
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="courseName">Course Name</label>
-                          <input
-                              type="text"
-                              id="courseName"
-                              name="courseName"
-                              placeholder="Enter course name"
-                              value={courseDetails.courseName}
-                              onChange={(e) => setCourseDetails({ ...courseDetails, courseName: e.target.value })}
-                              style={{
-                                  padding: '0.5rem',
-                                  borderRadius: '12px',
-                                  border: '1px solid  #5c5470',
-                                  fontSize: '1rem',
-                                  width: '300px',
-                                  boxSizing: 'border-box',
-                                  background: '#ffffff',
-                                  color: ' #4b3c70',
-                              }}
-                          />
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="openCourse">Open Course</label>
-                          <input
-                              type="checkbox"
-                              id="openCourse"
-                              name="openCourse"
-                              checked={courseDetails.openCourse || false}
-                              onChange={(e) => setCourseDetails({ ...courseDetails, openCourse: e.target.checked })}
-                              style={{
-                                  width: '20px',
-                                  height: '20px',
-                                  cursor: 'pointer',
-                                  background: '#f0f0f0',
-                                  border: '1px solid #5c5470',
-                                  borderRadius: '4px',
-                              }}
-                          />
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="startDate">Course Start Date</label>
-                          <input
-                              type="date"
-                              id="startDate"
-                              name="startDate"
-                              value={courseDetails.startDate || ''}
-                              onChange={(e) => setCourseDetails({ ...courseDetails, startDate: e.target.value })}
-                              style={{
-                                  padding: '0.5rem',
-                                  borderRadius: '12px',
-                                  border: '1px solid  #5c5470',
-                                  fontSize: '1rem',
-                                  width: '300px',
-                                  boxSizing: 'border-box',
-                                  background: '#ffffff',
-                                  color: ' #4b3c70',
-                                  position: 'relative',
-                                  zIndex: 9999,
-                              }}
-                          />
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="endDate">Course End Date</label>
-                          <input
-                              type="date"
-                              id="endDate"
-                              name="endDate"
-                              value={courseDetails.endDate || ''}
-                              onChange={(e) => setCourseDetails({ ...courseDetails, endDate: e.target.value })}
-                              style={{
-                                  padding: '0.5rem',
-                                  borderRadius: '12px',
-                                  border: '1px solid  #5c5470',
-                                  fontSize: '1rem',
-                                  width: '300px',
-                                  boxSizing: 'border-box',
-                                  background: '#ffffff',
-                                  color: ' #4b3c70',
-                                  position: 'relative',
-                                  zIndex: 9999,
-                              }}
-                          />
-                      </div>
-
-                      <div style={{ display: 'flex', width: '100%', marginLeft: '150px' }}>
-                          <button
-                              type="submit"
-                              style={{
-                                  background: '#5c5470',
-                                  border: 'none',
-                                  color: '#fff',
-                                  fontWeight: 600,
-                                  fontSize: '1rem',
-                                  padding: '0.5rem 1rem',
-                                  borderRadius: '8px',
-                                  cursor: 'pointer',
-                                  boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
-                                  transition: 'background 0.2s',
-                              }}
-                          >
-                              Add Course
-                          </button>
-                      </div>
-                  </form>
-              </div>
-          )}
-          {activeTab === 'batch' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Add New Batch</h2>
-                <form onSubmit={handleBatchSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+            <div className="course-manager" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+              <div className="add-course" style={{ width: '48%' }}>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Add New Course</h2>
+                <form onSubmit={handleCourseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="batchId">Batch ID</label>
+                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="courseId">Course ID</label>
                         <input
                             type="text"
-                            id="batchId"
-                            name="batchId"
-                            placeholder="Enter batch ID"
-                            value={batchDetails.batchId}
-                            onChange={(e) => setBatchDetails({ ...batchDetails, batchId: e.target.value })}
+                            id="courseId"
+                            name="courseId"
+                            placeholder="Enter course ID"
+                            value={courseDetails.courseId}
+                            onChange={(e) => setCourseDetails({ ...courseDetails, courseId: e.target.value })}
                             style={{
                                 padding: '0.5rem',
                                 borderRadius: '12px',
@@ -644,53 +610,90 @@ useEffect(() => {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="instructor">Instructor</label>
-                        <select
-                            id="instructor"
-                            name="instructor"
-                            value={batchDetails.instructor}
-                            onChange={(e) => setBatchDetails({ ...batchDetails, instructor: e.target.value })}
+                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="courseName">Course Name</label>
+                        <input
+                            type="text"
+                            id="courseName"
+                            name="courseName"
+                            placeholder="Enter course name"
+                            value={courseDetails.courseName}
+                            onChange={(e) => setCourseDetails({ ...courseDetails, courseName: e.target.value })}
                             style={{
                                 padding: '0.5rem',
                                 borderRadius: '12px',
-                                border: '1px solid #5c5470',
+                                border: '1px solid  #5c5470',
                                 fontSize: '1rem',
                                 width: '300px',
                                 boxSizing: 'border-box',
                                 background: '#ffffff',
                                 color: ' #4b3c70',
                             }}
-                        >
-                            <option value="">Select Instructor</option>
-                            {instructors.map((instructor) => (
-                                <option key={instructor.id} value={instructor.id}>{instructor.name}</option>
-                            ))}
-                        </select>
+                        />
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="course">Course</label>
-                        <select
-                          id="course"
-                          name="course"
-                          value={batchDetails.course}
-                          onChange={(e) => setBatchDetails({ ...batchDetails, course: e.target.value })}
-                          style={{
-                            padding: '0.5rem',
-                            borderRadius: '12px',
-                            border: '1px solid #5c5470',
-                            fontSize: '1rem',
-                            width: '300px',
-                            boxSizing: 'border-box',
-                            background: '#ffffff',
-                            color: ' #4b3c70',
-                          }}
-                        >
-                          <option value="">Select Course</option>
-                          {courses.map((course) => (
-                            <option key={course.id} value={course.id}>{course.name}</option>
-                          ))}
-                        </select>
+                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="openCourse">Open Course</label>
+                        <input
+                            type="checkbox"
+                            id="openCourse"
+                            name="openCourse"
+                            checked={courseDetails.openCourse || false}
+                            onChange={(e) => setCourseDetails({ ...courseDetails, openCourse: e.target.checked })}
+                            style={{
+                                width: '20px',
+                                height: '20px',
+                                cursor: 'pointer',
+                                background: '#f0f0f0',
+                                border: '1px solid #5c5470',
+                                borderRadius: '4px',
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="startDate">Course Start Date</label>
+                        <input
+                            type="date"
+                            id="startDate"
+                            name="startDate"
+                            value={courseDetails.startDate || ''}
+                            onChange={(e) => setCourseDetails({ ...courseDetails, startDate: e.target.value })}
+                            style={{
+                                padding: '0.5rem',
+                                borderRadius: '12px',
+                                border: '1px solid  #5c5470',
+                                fontSize: '1rem',
+                                width: '300px',
+                                boxSizing: 'border-box',
+                                background: '#ffffff',
+                                color: ' #4b3c70',
+                                position: 'relative',
+                                zIndex: 9999,
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="endDate">Course End Date</label>
+                        <input
+                            type="date"
+                            id="endDate"
+                            name="endDate"
+                            value={courseDetails.endDate || ''}
+                            onChange={(e) => setCourseDetails({ ...courseDetails, endDate: e.target.value })}
+                            style={{
+                                padding: '0.5rem',
+                                borderRadius: '12px',
+                                border: '1px solid  #5c5470',
+                                fontSize: '1rem',
+                                width: '300px',
+                                boxSizing: 'border-box',
+                                background: '#ffffff',
+                                color: ' #4b3c70',
+                                position: 'relative',
+                                zIndex: 9999,
+                            }}
+                        />
                     </div>
 
                     <div style={{ display: 'flex', width: '100%', marginLeft: '150px' }}>
@@ -709,12 +712,209 @@ useEffect(() => {
                                 transition: 'background 0.2s',
                             }}
                         >
-                            Add Batch
+                            Add Course
                         </button>
                     </div>
                 </form>
+              </div>
+
+              <div className="delete-course" style={{ width: '48%', textAlign: 'right' }}>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'right', color: '#3f3d56' }}>Delete Course</h2>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', width: '100%' }}>
+                  <select
+                    value={courseId}
+                    onChange={(e) => setCourseId(e.target.value)}
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '12px',
+                      border: '1px solid #5c5470',
+                      fontSize: '1rem',
+                      width: '300px',
+                      boxSizing: 'border-box',
+                      background: '#ffffff',
+                      color: ' #4b3c70',
+                    }}
+                  >
+                    <option value="">Select Course</option>
+                    {courses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.courseId} - {course.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleCourseDelete}
+                    style={{
+                      background: '#5c5470',
+                      border: 'none',
+                      color: '#fff',
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
+                      transition: 'background 0.2s',
+                    }}
+                  >
+                    Delete Course
+                  </button>
+                </div>
+              </div>
             </div>
         )}
+
+
+        {activeTab === 'batch' && (
+          <div className="batch-manager" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+            
+            {/* Add Batch Section */}
+            <div className="add-batch" style={{ width: '48%' }}>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Add New Batch</h2>
+              <form onSubmit={handleBatchSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+                
+                {/* Batch ID */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="batchId">Batch ID</label>
+                  <input
+                    type="text"
+                    id="batchId"
+                    name="batchId"
+                    placeholder="Enter batch ID"
+                    value={batchDetails.batchId}
+                    onChange={(e) => setBatchDetails({ ...batchDetails, batchId: e.target.value })}
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '12px',
+                      border: '1px solid  #5c5470',
+                      fontSize: '1rem',
+                      width: '300px',
+                      background: '#ffffff',
+                      color: ' #4b3c70',
+                    }}
+                  />
+                </div>
+
+                {/* Instructor */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="instructor">Instructor</label>
+                  <select
+                    id="instructor"
+                    name="instructor"
+                    value={batchDetails.instructor}
+                    onChange={(e) => setBatchDetails({ ...batchDetails, instructor: e.target.value })}
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '12px',
+                      border: '1px solid #5c5470',
+                      fontSize: '1rem',
+                      width: '300px',
+                      background: '#ffffff',
+                      color: ' #4b3c70',
+                    }}
+                  >
+                    <option value="">Select Instructor</option>
+                    {instructors.map((instructor) => (
+                      <option key={instructor.id} value={instructor.id}>{instructor.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Course */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="course">Course</label>
+                  <select
+                    id="course"
+                    name="course"
+                    value={batchDetails.course}
+                    onChange={(e) => setBatchDetails({ ...batchDetails, course: e.target.value })}
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '12px',
+                      border: '1px solid #5c5470',
+                      fontSize: '1rem',
+                      width: '300px',
+                      background: '#ffffff',
+                      color: ' #4b3c70',
+                    }}
+                  >
+                    <option value="">Select Course</option>
+                    {courses.map((course) => (
+                      <option key={course.id} value={course.id}> {course.courseId} - {course.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Submit Button */}
+                <div style={{ display: 'flex', width: '100%', marginLeft: '150px' }}>
+                  <button
+                    type="submit"
+                    style={{
+                      background: '#5c5470',
+                      border: 'none',
+                      color: '#fff',
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
+                      transition: 'background 0.2s',
+                    }}
+                  >
+                    Add Batch
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Delete Batch Section */}
+            <div className="delete-batch" style={{ width: '48%', textAlign: 'right' }}>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'right', color: '#3f3d56' }}>Delete Batch</h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', width: '100%' }}>
+                <select
+                  value={selectedBatchId}
+                  onChange={(e) => setSelectedBatchId(e.target.value)}
+                  style={{
+                    padding: '0.5rem',
+                    borderRadius: '12px',
+                    border: '1px solid #5c5470',
+                    fontSize: '1rem',
+                    width: '300px',
+                    background: '#ffffff',
+                    color: ' #4b3c70',
+                  }}
+                >
+                  <option value="">Select Batch</option>
+                  {batches.map((batch) => (
+                    <option key={batch._id} value={batch._id}>
+                      {batch.batchId} - {batch.course.courseName} ({batch.instructor.name})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleBatchDelete}
+                  style={{
+                    background: '#5c5470',
+                    border: 'none',
+                    color: '#fff',
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
+                    transition: 'background 0.2s',
+                  }}
+                >
+                  Delete Batch
+                </button>
+              </div>
+            </div>
+
+          </div>
+        )}
+
         </div>
       </main>
 

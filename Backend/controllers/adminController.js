@@ -7,6 +7,7 @@ import sendEmail from '../utils/sendEmail.js';
 import { Course } from '../models/Course.js';
 import emailExistence from 'email-existence';
 import { Batch } from '../models/Batch.js';
+import mongoose from 'mongoose';
 
 
 export const updateRole = async (req, res) => {
@@ -82,6 +83,19 @@ export const getCourses = async (req, res) => {
   }
 };
 
+export const getBatches = async (req, res) => {
+  try {
+    const batches = await Batch.find()
+      .populate('course', 'courseName')         // Populates course name
+      .populate('instructor', 'name');          // Populates instructor name
+
+    res.status(200).json(batches);
+  } catch (error) {
+    console.error('Error fetching batches:', error);
+    res.status(500).json({ message: 'Server error while fetching batches.' });
+  }
+};
+
 export const addBatch = async (req, res) => {
   const { batchId, instructor, course } = req.body;
 
@@ -133,5 +147,49 @@ export const getDashboardCounts = async (req, res) => {
   } catch (error) {
     console.error('Error fetching dashboard counts:', error);
     res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+export const deleteCourse = async (req, res) => {
+  const courseId = req.params.courseId || req.body.courseId;
+  // console.log('Received courseId:', courseId);
+
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    return res.status(400).json({ message: 'Invalid course ID.' });
+  }
+
+  try {
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found.' });
+    }
+
+    // Delete all batches associated with this course
+    await Batch.deleteMany({ course: course._id });
+
+    // Delete the course
+    await Course.findByIdAndDelete(courseId);
+
+    res.status(200).json({ message: 'Course and associated batches deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting course:', error);
+    res.status(500).json({ message: 'Server error. Please try again later.' });
+  }
+};
+
+export const deleteBatch = async (req, res) => {
+  try {
+    const { batchId } = req.params;
+
+    const deletedBatch = await Batch.findByIdAndDelete(batchId);
+
+    if (!deletedBatch) {
+      return res.status(404).json({ message: 'Batch not found' });
+    }
+
+    res.status(200).json({ message: 'Batch deleted successfully', batch: deletedBatch });
+  } catch (error) {
+    console.error('Error deleting batch:', error);
+    res.status(500).json({ message: 'Server error while deleting batch' });
   }
 };
