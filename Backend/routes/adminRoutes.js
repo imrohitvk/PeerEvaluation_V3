@@ -11,7 +11,7 @@ router.get('/courses', protect, getCourses);
 router.get('/batches', protect, getBatches);
 router.post('/add-batch', protect, addBatch);
 router.get('/dashboard-counts', protect, getDashboardCounts);
-router.delete('/delete-course/:courseId', protect, deleteCourse);
+router.delete('/delete-course/:courseId', protect, adminOrTeacherOnly, deleteCourse);
 router.delete('/delete-batch/:batchId', protect, adminOrTeacherOnly, deleteBatch);
 
 export default router;

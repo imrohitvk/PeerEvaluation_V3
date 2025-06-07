@@ -458,7 +458,7 @@ useEffect(() => {
 
           {activeTab === 'home' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', color: '#3f3d56' }}>
-              <h2 style={{ marginBottom: '2rem' }}>Welcome to the Admin Dashboard</h2>
+              <h2 style={{ ...sectionHeading, marginBottom: '2rem' }}>Welcome to the Admin Dashboard</h2>
               <div style={{ display: 'flex', justifyContent: 'space-around', width: '100%' }}>
                 <div style={{ textAlign: 'center', padding: '1rem', borderRadius: '12px', background: 'linear-gradient(135deg, #667eea, #764ba2)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '200px', color: '#fff' }}>
                   <FaChalkboardTeacher size={40} style={{ marginBottom: '0.5rem' }} />
@@ -511,12 +511,12 @@ useEffect(() => {
           )}
 
           {activeTab === 'role' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
-              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Role Manager</h2>
-              <p style={{ color: '#3f3d56' }}>Update the role of a user by providing their email ID and selecting a role.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', color: '#2d3559' }}>
+              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Role Manager</h2>
+              <p style={{textAlign: 'left', color: '#3f3d56' }}>Update the role of a user by providing their email ID and selecting a role.</p>
               <form onSubmit={handleRoleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="email">Email ID</label>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }} htmlFor="email">Email ID</label>
                   <input
                     type="email"
                     id="email"
@@ -536,7 +536,7 @@ useEffect(() => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="role">Select Role:</label>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }} htmlFor="role">Select Role</label>
                   <select
                     id="role"
                     name="role"
@@ -788,7 +788,7 @@ useEffect(() => {
                       borderRadius: '12px',
                       border: '1px solid  #5c5470',
                       fontSize: '1rem',
-                      width: '300px',
+                      width: '282px',
                       background: '#ffffff',
                       color: ' #4b3c70',
                     }}

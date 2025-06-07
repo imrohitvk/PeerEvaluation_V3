@@ -10,6 +10,10 @@ export default function TeacherDashboard() {
   const [user, setUser] = useState({ name: '', email: '', role: '' });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [coursesAndBatches, setCoursesAndBatches] = useState([]);
+  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [filteredBatches, setFilteredBatches] = useState([]);
+  const [selectedBatchId, setSelectedBatchId] = useState('');
+  const [overlayOpen, setOverlayOpen] = useState(false);
   const navigate = useNavigate();
   const { setRefreshApp } = useContext(AppContext);
 
@@ -45,21 +49,43 @@ export default function TeacherDashboard() {
     const fetchCoursesAndBatches = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5000/api/auth/teacher-courses-batches', {
+        const response = await fetch('http://localhost:5000/api/teacher/teacher-courses-batches', {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
         const data = await response.json();
-        setCoursesAndBatches(data);
+
+        // Ensure the response is an array before setting state
+        if (Array.isArray(data)) {
+          setCoursesAndBatches(data);
+        } else {
+          console.error('Invalid response format:', data);
+          setCoursesAndBatches([]); // Fallback to empty array
+        }
       } catch (error) {
         console.error('Failed to fetch courses and batches:', error);
+        setCoursesAndBatches([]); // Fallback to empty array
       }
     };
 
     fetchCoursesAndBatches();
   }, []);
+
+  useEffect(() => {
+    if (selectedCourseId) {
+      const selectedCourse = coursesAndBatches.find(
+        (course) => course.id === selectedCourseId
+      );
+      const batches = selectedCourse ? selectedCourse.batches : [];
+      setFilteredBatches(batches);
+      setSelectedBatchId(""); // Reset batch selection when course changes
+    } else {
+      setFilteredBatches([]);
+      setSelectedBatchId("");
+    }
+  }, [selectedCourseId, coursesAndBatches]);
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -83,7 +109,7 @@ export default function TeacherDashboard() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/auth/update-role', {
+      const response = await fetch('http://localhost:5000/api/admin/update-role', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,7 +125,7 @@ export default function TeacherDashboard() {
         // Optionally, you can reset the form fields after successful update
         document.getElementById('email').value = '';
         document.getElementById('role').value = '';
-        setTimeout(() => setRefreshApp(true), 1000); // Adds a 1-second delay before refreshing the app
+        // setTimeout(() => setRefreshApp(true), 1000); // Adds a 1-second delay before refreshing the app
       } else {
         showMessage(`Error! ${data.message || 'Failed to update role.'}`, 'error');
       }
@@ -109,6 +135,40 @@ export default function TeacherDashboard() {
     }
   };
 
+  const handleScheduleExam = () => {
+    setOverlayOpen(true);
+  };
+
+  const handleOverlayClose = () => {
+    setOverlayOpen(false);
+  };
+
+  const handleOverlaySubmit = async (formData) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/exams/schedule', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showMessage(`Exam scheduled successfully: ${data.message}`, 'success');
+      } else {
+        const errorData = await response.json();
+        showMessage(`Failed to schedule exam: ${errorData.message}`, 'error');
+      }
+    } catch (error) {
+      showMessage('An error occurred while scheduling the exam.', 'error');
+      console.error(error);
+    }
+
+    setOverlayOpen(false);
+  };
 
   return (
     <div
@@ -185,6 +245,7 @@ export default function TeacherDashboard() {
             <button onClick={() => setActiveTab('home')} style={buttonStyle(activeTab === 'home')}>🏠 Home</button>
             <button onClick={() => setActiveTab('role')} style={buttonStyle(activeTab === 'role')}>🧑‍💼 Role Manager</button>
             <button onClick={() => setActiveTab('course')} style={buttonStyle(activeTab === 'course')}>📚 Courses</button>
+            <button onClick={() => setActiveTab('exam')} style={buttonStyle(activeTab === 'exam')}>📝 Exams</button>
             <button onClick={logout} style={{ marginTop: 'auto', ...buttonStyle(false) }}>🚪 Logout</button>
           </>
         )}
@@ -215,9 +276,10 @@ export default function TeacherDashboard() {
         }}>
           {activeTab === 'home' && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#3f3d56' }}>
-              <h2>Welcome to the Teacher Dashboard</h2>
+              <h2 style={{ ...sectionHeading, marginBottom: '2rem' }}>Welcome to the Teacher Dashboard</h2>
             </div>
           )}
+
           {activeTab === 'profile' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559', height: '100%' }}>
               <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Profile</h2>
@@ -250,12 +312,12 @@ export default function TeacherDashboard() {
           )}
 
           {activeTab === 'role' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
-              <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Role Manager</h2>
-              <p style={{ color: '#3f3d56' }}>Update the role of a user by providing their email ID and selecting a role.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', color: '#2d3559' }}>
+              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Role Manager</h2>
+              <p style={{textAlign: 'left', color: '#3f3d56' }}>Update the role of a user by providing their email ID and selecting a role.</p>
               <form onSubmit={handleRoleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="email">Email ID</label>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }} htmlFor="email">Email ID</label>
                   <input
                     type="email"
                     id="email"
@@ -275,7 +337,7 @@ export default function TeacherDashboard() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="role">Role</label>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }} htmlFor="role">Select Role</label>
                   <select
                     id="role"
                     name="role"
@@ -319,41 +381,158 @@ export default function TeacherDashboard() {
               </form>
             </div>
           )}
+
           {activeTab === 'course' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559', width: '100%' }}>
-              <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Courses and Batches</h2>
-              {coursesAndBatches.length > 0 ? (
-                coursesAndBatches.map((course) => (
-                  <div key={course.id} style={{ marginBottom: '1.5rem', width: '100%' }}>
-                    <h3 style={{ color: '#3f3d56', fontWeight: 'bold', marginBottom: '1rem' }}>{course.name}</h3>
-                    <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor={`batch-${course.id}`}>Select Batch</label>
-                    <select
-                      id={`batch-${course.id}`}
-                      style={{
-                        padding: '0.5rem',
-                        borderRadius: '12px',
-                        border: '1px solid #5c5470',
-                        fontSize: '1rem',
-                        width: '300px',
-                        boxSizing: 'border-box',
-                        background: '#ffffff',
-                        color: ' #4b3c70',
-                      }}
-                    >
-                      <option value="">Select Batch</option>
-                      {course.batches.map((batch) => (
-                        <option key={batch.id} value={batch.id}>{batch.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))
-              ) : (
-                <p style={{ color: '#3f3d56', fontSize: '1.2rem' }}>No courses or batches available.</p>
-              )}
+            <div style={{ display: 'flex', flexDirection: 'column', color: '#2d3559', width: '100%' }}>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', color: '#3f3d56' }}>
+                Courses and Batches
+              </h2>
+
+              <table style={{ width: '100%', borderCollapse: 'collapse', borderRadius: '12px', overflow: 'hidden' }}>
+                <thead style={{ backgroundColor: '#4b3c70', color: '#ffffff' }}>
+                  <tr>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Course Name</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Batch Name</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {coursesAndBatches.map((course) =>
+                    course.batches.map((batch) => (
+                      <tr key={batch.id} style={{ borderBottom: '1px solid #ddd' }}>
+                        <td style={{ padding: '12px', color: '#3f3d56' }}>{course.name}</td>
+                        <td style={{ padding: '12px', color: '#3f3d56' }}>{batch.name}</td>
+                        <td style={{ padding: '12px' }}>
+                          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                            <button
+                              onClick={() => showMessage(`Add enroll students functionality for Course: ${course.name}, Batch: ${batch.name}`,"info")}
+                              style={{
+                                padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                backgroundColor: '#4b3c70',
+                                color: '#ffffff',
+                                border: 'none',
+                                fontSize: '0.95rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Enroll Students
+                            </button>
+                            <button
+                              onClick={() => showMessage(`Add Student list download functionality for Course: ${course.name}, Batch: ${batch.name}`,"info")}
+                              style={{
+                                padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                backgroundColor: '#4b3c70',
+                                color: '#ffffff',
+                                border: 'none',
+                                fontSize: '0.95rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Download List
+                            </button>
+                          </div>
+                          
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
+          
+          {activeTab === 'exam' && (
+            <div style={{ display: 'flex', flexDirection: 'column', color: '#2d3559', width: '100%' }}>
+              <h2 style={{ ...sectionHeading, marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>
+                Exam Management
+              </h2>
+              {/* Inline Row for Course & Batch Dropdowns */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', width: '100%' }}>
+                {/* Course Dropdown */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '120px' }} htmlFor="courseDropdown">Course</label>
+                  <select
+                    id="courseDropdown"
+                    value={selectedCourseId}
+                    onChange={(e) => setSelectedCourseId(e.target.value)}
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '12px',
+                      border: '1px solid #5c5470',
+                      fontSize: '1rem',
+                      width: '250px',
+                      background: '#ffffff',
+                      color: '#4b3c70',
+                    }}
+                  >
+                    <option value="">Select Course</option>
+                    {coursesAndBatches.map(course => (
+                      <option key={course.id} value={course.id}>{course.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Batch Dropdown */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '120px' }} htmlFor="batchDropdown">Batch</label>
+                  <select
+                    id="batchDropdown"
+                    value={selectedBatchId}
+                    onChange={(e) => setSelectedBatchId(e.target.value)}
+                    disabled={filteredBatches.length === 0}
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '12px',
+                      border: '1px solid #5c5470',
+                      fontSize: '1rem',
+                      width: '250px',
+                      background: filteredBatches.length > 0 ? '#ffffff' : '#f0f0f0',
+                      color: filteredBatches.length > 0 ? '#4b3c70' : '#a0a0a0',
+                    }}
+                  >
+                    <option value="">{filteredBatches.length > 0 ? 'Select Batch' : 'No Batches Available'}</option>
+                    {filteredBatches.map(batch => (
+                      <option key={batch.id} value={batch.id}>{batch.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Schedule Evaluation Button */}
+                <button
+                  onClick={handleScheduleExam}
+                  disabled={!selectedCourseId || !selectedBatchId} // Button is disabled if either course or batch is not selected
+                  style={{
+                    marginLeft: 'auto',
+                    padding: '0.6rem 1.2rem',
+                    borderRadius: '12px',
+                    backgroundColor: selectedCourseId && selectedBatchId ? '#4b3c70' : '#a0a0a0', // Change color based on enabled/disabled state
+                    color: '#ffffff',
+                    border: 'none',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    cursor: selectedCourseId && selectedBatchId ? 'pointer' : 'not-allowed', // Change cursor based on enabled/disabled state
+                  }}
+                >
+                  Schedule Exam
+                </button>
+              </div>
+            </div>
+          )}
+          
         </div>
       </main>
+
+      {/* Schedule Exam Overlay */}
+      <ScheduleExamOverlay
+        isOpen={overlayOpen}
+        onClose={handleOverlayClose}
+        onSubmit={handleOverlaySubmit}
+        batch={selectedBatchId}
+      />
 
       {/* Responsive styles */}
       <style>
@@ -658,4 +837,150 @@ const sectionHeading = {
   fontWeight: 'bold',
   color: '#3f3d56',
   marginBottom: '1.25rem'
+};
+
+const ScheduleExamOverlay = ({ isOpen, onClose, onSubmit, batch }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    date: '',
+    numberOfQuestions: '',
+    duration: '',
+    totalMarks: '',
+    k: '',
+    pdfFile: null,
+  });
+
+  const handleChange = (e) => {
+    const { name, value, files } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: files ? files[0] : value,
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit({ ...formData, batch });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="overlay" style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+    }}>
+      <div className="overlay-content" style={{
+        backgroundColor: '#fff',
+        padding: '2rem',
+        borderRadius: '8px',
+        width: '400px',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+      }}>
+        <h2 style={{ color: '#3f3d56', marginBottom: '1rem' }}>Schedule Exam</h2>
+        {/* Updated the overlay form to display labels and input fields in a single line with individual fields for editing */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Name:</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Date:</label>
+            <input
+              type="date"
+              name="date"
+              value={formData.date}
+              onChange={handleChange}
+              required
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Number of Questions:</label>
+            <input
+              type="number"
+              name="numberOfQuestions"
+              value={formData.numberOfQuestions}
+              onChange={handleChange}
+              required
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Duration (in mins.):</label>
+            <input
+              type="number"
+              name="duration"
+              value={formData.duration}
+              onChange={handleChange}
+              required
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Total Marks:</label>
+            <input
+              type="number"
+              name="totalMarks"
+              value={formData.totalMarks}
+              onChange={handleChange}
+              required
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>No of Peers (K):</label>
+            <input
+              type="number"
+              name="k"
+              value={formData.k}
+              onChange={handleChange}
+              required
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Solutions:</label>
+            <input
+              type="file"
+              name="pdfFile"
+              onChange={handleChange}
+              accept=".pdf"
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+            <button type="submit" style={{ padding: '0.5rem 1rem', borderRadius: '4px', backgroundColor: '#4b3c70', color: '#fff', border: 'none', cursor: 'pointer' }}>
+              Submit
+            </button>
+            <button type="button" onClick={onClose} style={{ padding: '0.5rem 1rem', borderRadius: '4px', backgroundColor: '#ccc', color: '#000', border: 'none', cursor: 'pointer' }}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 };
