@@ -166,6 +166,9 @@ export default function TeacherDashboard() {
       if (response.ok) {
         const data = await response.json();
         showMessage(`Success: ${data.message}`, 'success');
+      } else if (response.status === 409) {
+        const errorData = await response.json();
+        showMessage(`Info: ${errorData.message}`, 'info'); // Display informational message
       } else {
         const errorData = await response.json();
         showMessage(`Error!  ${errorData.message}`, 'error');

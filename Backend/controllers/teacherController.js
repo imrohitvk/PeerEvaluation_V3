@@ -153,6 +153,17 @@ export const studentsEnroll = async (req, res) => {
             await user.save();
           }
 
+          // Check if the student is already enrolled in the course and batch
+          const existingEnrollment = await Enrollment.findOne({ student: user._id, course, batch });
+          if (existingEnrollment) {
+            // Fetch batch and course details to get their names/ids
+            const batchDoc = await Batch.findById(batch);
+            const courseDoc = await Course.findById(course);
+            const batchName = batchDoc ? batchDoc.batchId : batch;
+            const courseName = courseDoc ? courseDoc.courseName : course;
+            return res.status(409).json({ message: `Student ${student.name} is already enrolled in the batch ${batchName} of course ${courseName}.` });
+          }
+
           // Enroll the student in the course and batch
           const enrollment = new Enrollment({
             student: user._id,
