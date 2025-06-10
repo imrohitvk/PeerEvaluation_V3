@@ -14,6 +14,9 @@ export default function TeacherDashboard() {
   const [filteredBatches, setFilteredBatches] = useState([]);
   const [selectedBatchId, setSelectedBatchId] = useState('');
   const [overlayOpen, setOverlayOpen] = useState(false);
+  const [enrollOverlayOpen, setEnrollOverlayOpen] = useState(false); // State for enroll students overlay
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedBatch, setSelectedBatch] = useState(null);
   const navigate = useNavigate();
   const { setRefreshApp } = useContext(AppContext);
 
@@ -143,10 +146,73 @@ export default function TeacherDashboard() {
     setOverlayOpen(false);
   };
 
+  // New handler for enrolling students
+  const handleEnrollStudents = async ({ csvFile, course, batch }) => {
+    const formData = new FormData();
+    formData.append('file', csvFile);
+    formData.append('course', course.id);
+    formData.append('batch', batch.id);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/teacher/students-enroll', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showMessage(`Success: ${data.message}`, 'success');
+      } else {
+        const errorData = await response.json();
+        showMessage(`Error!  ${errorData.message}`, 'error');
+      }
+    } catch (error) {
+      showMessage('An error occurred while enrolling students.', 'error');
+      console.error(error);
+    }
+
+    setEnrollOverlayOpen(false);
+  };
+
+  // Handler for downloading the student list
+  const downloadEnrolledStudents = async (courseId, batchId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/teacher/enrolled-students?courseId=${courseId}&batchId=${batchId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `students_${batchId}_${courseId}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        const errorData = await response.json();
+        showMessage(`Error! ${errorData.message}`, 'error');
+      }
+    } catch (error) {
+      showMessage('An error occurred while downloading the student list.', 'error');
+      console.error(error);
+    }
+  };
+
+  // Handler for submitting the exam schedule overlay
   const handleOverlaySubmit = async (formData) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/exams/schedule', {
+      const response = await fetch('http://localhost:5000/api/teacher/exam-schedule', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -405,7 +471,11 @@ export default function TeacherDashboard() {
                         <td style={{ padding: '12px' }}>
                           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                             <button
-                              onClick={() => showMessage(`Add enroll students functionality for Course: ${course.name}, Batch: ${batch.name}`,"info")}
+                              onClick={() => {
+                                setSelectedCourse(course);  // or course if you want full object
+                                setSelectedBatch(batch);
+                                setEnrollOverlayOpen(true);
+                              }}
                               style={{
                                 padding: '0.5rem 1rem',
                                 borderRadius: '8px',
@@ -420,7 +490,7 @@ export default function TeacherDashboard() {
                               Enroll Students
                             </button>
                             <button
-                              onClick={() => showMessage(`Add Student list download functionality for Course: ${course.name}, Batch: ${batch.name}`,"info")}
+                              onClick={() => downloadEnrolledStudents(course.id, batch.id)}
                               style={{
                                 padding: '0.5rem 1rem',
                                 borderRadius: '8px',
@@ -532,6 +602,16 @@ export default function TeacherDashboard() {
         onClose={handleOverlayClose}
         onSubmit={handleOverlaySubmit}
         batch={selectedBatchId}
+      />
+
+      {/* Enroll Students Overlay */}
+      <EnrollStudentsOverlay
+        isOpen={enrollOverlayOpen}
+        onClose={() => setEnrollOverlayOpen(false)}
+        onSubmit={handleEnrollStudents}
+        course={selectedCourse}
+        batch={selectedBatch}
+        closeOnOutsideClick={true} // Added prop to enable closing on outside click
       />
 
       {/* Responsive styles */}
@@ -839,6 +919,98 @@ const sectionHeading = {
   marginBottom: '1.25rem'
 };
 
+// Fixed JSX and syntax issues in the EnrollStudentsOverlay component
+const EnrollStudentsOverlay = ({ isOpen, onClose, onSubmit, course, batch, closeOnOutsideClick }) => {
+  const [csvFile, setCsvFile] = useState(null);
+
+  const handleFileChange = (e) => {
+    setCsvFile(e.target.files[0]);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!csvFile) {
+      alert('Please upload a CSV file.');
+      return;
+    }
+    if (!course || !batch) {
+      alert('Course and batch are required.');
+      return;
+    }
+    onSubmit({ csvFile, course, batch });
+  };
+
+  useEffect(() => {
+    if (closeOnOutsideClick && isOpen) {
+      const handleClickOutside = (event) => {
+        if (isOpen && !event.target.closest('.overlay-content')) {
+          onClose();
+        }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isOpen, onClose, closeOnOutsideClick]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="overlay" style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+    }}>
+      <div className="overlay-content" style={{
+        backgroundColor: '#fff',
+        padding: '2rem',
+        borderRadius: '8px',
+        width: '400px',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+      }}>
+        <h2 style={{ color: '#3f3d56', marginBottom: '1rem' }}>Enroll Students</h2>
+        <form onSubmit={handleSubmit} encType="multipart/form-data" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Upload CSV:</label>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              required
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
+            />
+          </div>
+          {/* Show course and batch info, not as input */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Course:</label>
+            <span style={{ color: '#3f3d56' }}>{course.name}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Batch:</label>
+            <span style={{ color: '#3f3d56' }}>{batch.name}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+            <button type="submit" style={{ padding: '0.5rem 1rem', borderRadius: '4px', backgroundColor: '#4b3c70', color: '#fff', border: 'none', cursor: 'pointer' }}>
+              Submit
+            </button>
+            <button type="button" onClick={onClose} style={{ padding: '0.5rem 1rem', borderRadius: '4px', backgroundColor: '#ccc', color: '#000', border: 'none', cursor: 'pointer' }}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const ScheduleExamOverlay = ({ isOpen, onClose, onSubmit, batch }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -858,10 +1030,24 @@ const ScheduleExamOverlay = ({ isOpen, onClose, onSubmit, batch }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleScheduleExamSubmit = (e) => {
     e.preventDefault();
     onSubmit({ ...formData, batch });
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isOpen && !event.target.closest('.overlay-content')) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -887,7 +1073,7 @@ const ScheduleExamOverlay = ({ isOpen, onClose, onSubmit, batch }) => {
       }}>
         <h2 style={{ color: '#3f3d56', marginBottom: '1rem' }}>Schedule Exam</h2>
         {/* Updated the overlay form to display labels and input fields in a single line with individual fields for editing */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={handleScheduleExamSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Name:</label>
             <input
