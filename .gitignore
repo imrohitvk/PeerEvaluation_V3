@@ -12,7 +12,7 @@ node_modules
 dist
 dist-ssr
 *.local
-Backend\uploads
+Backend/uploads/
 
 # Editor directories and files
 .vscode/*
