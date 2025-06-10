@@ -7,6 +7,7 @@ import { User } from '../models/User.js';
 import { Enrollment } from '../models/Enrollment.js';
 import sendEmail from '../utils/sendEmail.js';
 import emailExistence from 'email-existence';
+import { Parser } from 'json2csv';
 
 
 // Generate a strong random password: min 8 chars, at least 1 uppercase, 1 lowercase, 1 number, 1 special char
@@ -167,5 +168,39 @@ export const studentsEnroll = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'An error occurred while enrolling students.' });
+  }
+};
+
+export const getEnrolledStudents = async (req, res) => {
+  try {
+    const { courseId, batchId } = req.query;
+
+    if (!courseId || !batchId) {
+      return res.status(400).json({ message: 'Course ID and Batch ID are required.' });
+    }
+
+    const enrollments = await Enrollment.find({ course: courseId, batch: batchId }).populate('student').populate('course').populate('batch');
+
+    if (!enrollments || enrollments.length === 0) {
+      return res.status(404).json({ message: 'No students found for the specified batch and course.' });
+    }
+
+    const students = enrollments.map(enrollment => ({
+      name: enrollment.student.name,
+      email: enrollment.student.email,
+      enrollmentDate: enrollment.enrollmentDate ? new Date(enrollment.enrollmentDate).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'N/A',
+      batchName: enrollment.batch.batchId, // Assuming batchId is the identifier for the batch
+      courseName: enrollment.course.courseName, // Assuming courseName is the identifier for the course
+    }));
+
+    const json2csvParser = new Parser();
+    const csv = json2csvParser.parse(students);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=students_${batchId}_${courseId}.csv`);
+    res.status(200).send(csv);
+  } catch (error) {
+    console.error('Error fetching enrolled students:', error);
+    res.status(500).json({ message: 'An error occurred while fetching enrolled students.' });
   }
 };
