@@ -1,10 +1,11 @@
 import { Batch } from '../models/Batch.js';
 import { Course } from '../models/Course.js';
+import { User } from '../models/User.js';
+import { Enrollment } from '../models/Enrollment.js';
+import { Examination } from '../models/Examination.js';
 import csv from 'csv-parser';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
-import { User } from '../models/User.js';
-import { Enrollment } from '../models/Enrollment.js';
 import sendEmail from '../utils/sendEmail.js';
 import emailExistence from 'email-existence';
 import { Parser } from 'json2csv';
@@ -213,5 +214,37 @@ export const getEnrolledStudents = async (req, res) => {
   } catch (error) {
     console.error('Error fetching enrolled students:', error);
     res.status(500).json({ message: 'An error occurred while fetching enrolled students.' });
+  }
+};
+
+export const scheduleExam = async (req, res) => {
+  try {
+    const { name, batch, date, time, number_of_questions, duration, totalMarks, k } = req.body;
+    const solutions = req.file ? req.file.path : null;
+
+    if (!name || !batch || !date || !time || !number_of_questions || !duration || !totalMarks || !k) {
+      return res.status(400).json({ message: 'All fields are required.' });
+    }
+
+    const exam = new Examination({
+      name,
+      batch,
+      date,
+      time,
+      number_of_questions,
+      duration,
+      totalMarks,
+      k,
+      solutions: solutions || '', // Optional field, can be empty
+      total_students: 0, // This will be updated later
+      createdBy: req.user._id, // Assuming req.user is set by auth middleware
+    });
+
+    await exam.save();
+
+    res.status(201).json({ message: 'Exam scheduled successfully.', exam });
+  } catch (error) {
+    console.error('Error scheduling exam:', error);
+    res.status(500).json({ message: 'An error occurred while scheduling the exam.' });
   }
 };

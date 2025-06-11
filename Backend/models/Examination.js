@@ -5,6 +5,7 @@ const ExaminationSchema = new mongoose.Schema({
     // course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
     batch: { type: mongoose.Schema.Types.ObjectId, ref: 'Batch', required: true },
     date: { type: Date, required: true },
+    time: { type: String, required: true }, // Assuming time is a string in HH:MM format
     number_of_questions: { type: Number, required: true },
     duration: { type: Number, required: true },
     totalMarks: { type: Number, required: true },
@@ -13,7 +14,7 @@ const ExaminationSchema = new mongoose.Schema({
     completed: { type: Boolean, default: false },
     flags: { type: Boolean, default: false },
     evaluations_sent: { type: Boolean, default: false },
-    solutions: { type: String },
+    solutions: { type: Object },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     createdAt: { type: Date, default: Date.now },
 });

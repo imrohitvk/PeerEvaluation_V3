@@ -13,7 +13,7 @@ export default function TeacherDashboard() {
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [filteredBatches, setFilteredBatches] = useState([]);
   const [selectedBatchId, setSelectedBatchId] = useState('');
-  const [overlayOpen, setOverlayOpen] = useState(false);
+  const [examOverlayOpen, setExamOverlayOpen] = useState(false);
   const [enrollOverlayOpen, setEnrollOverlayOpen] = useState(false); // State for enroll students overlay
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedBatch, setSelectedBatch] = useState(null);
@@ -139,11 +139,11 @@ export default function TeacherDashboard() {
   };
 
   const handleScheduleExam = () => {
-    setOverlayOpen(true);
+    setExamOverlayOpen(true);
   };
 
-  const handleOverlayClose = () => {
-    setOverlayOpen(false);
+  const handleExamOverlayClose = () => {
+    setExamOverlayOpen(false);
   };
 
   // New handler for enrolling students
@@ -212,16 +212,28 @@ export default function TeacherDashboard() {
   };
 
   // Handler for submitting the exam schedule overlay
-  const handleOverlaySubmit = async (formData) => {
+  const handleExamSubmit = async (formData) => {
     try {
       const token = localStorage.getItem('token');
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('batch', formData.batch);
+      formDataToSend.append('date', formData.date);
+      formDataToSend.append('time', formData.time);
+      formDataToSend.append('number_of_questions', formData.number_of_questions);
+      formDataToSend.append('duration', formData.duration);
+      formDataToSend.append('totalMarks', formData.totalMarks);
+      formDataToSend.append('k', formData.k);
+      if (formData.solutions) {
+        formDataToSend.append('solutions', formData.solutions);
+      }
       const response = await fetch('http://localhost:5000/api/teacher/exam-schedule', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          // 'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: formDataToSend,
       });
 
       if (response.ok) {
@@ -236,7 +248,7 @@ export default function TeacherDashboard() {
       console.error(error);
     }
 
-    setOverlayOpen(false);
+    setExamOverlayOpen(false);
   };
 
   return (
@@ -601,9 +613,9 @@ export default function TeacherDashboard() {
 
       {/* Schedule Exam Overlay */}
       <ScheduleExamOverlay
-        isOpen={overlayOpen}
-        onClose={handleOverlayClose}
-        onSubmit={handleOverlaySubmit}
+        isOpen={examOverlayOpen}
+        onClose={handleExamOverlayClose}
+        onSubmit={handleExamSubmit}
         batch={selectedBatchId}
       />
 
@@ -1018,11 +1030,12 @@ const ScheduleExamOverlay = ({ isOpen, onClose, onSubmit, batch }) => {
   const [formData, setFormData] = useState({
     name: '',
     date: '',
-    numberOfQuestions: '',
+    time: '',
+    number_of_questions: '',
     duration: '',
     totalMarks: '',
     k: '',
-    pdfFile: null,
+    solutions: null,
   });
 
   const handleChange = (e) => {
@@ -1076,7 +1089,7 @@ const ScheduleExamOverlay = ({ isOpen, onClose, onSubmit, batch }) => {
       }}>
         <h2 style={{ color: '#3f3d56', marginBottom: '1rem' }}>Schedule Exam</h2>
         {/* Updated the overlay form to display labels and input fields in a single line with individual fields for editing */}
-        <form onSubmit={handleScheduleExamSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={handleScheduleExamSubmit} encType="multipart/form-data" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Name:</label>
             <input
@@ -1102,11 +1115,23 @@ const ScheduleExamOverlay = ({ isOpen, onClose, onSubmit, batch }) => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Time (24-hour):</label>
+            <input
+              type="time"
+              name="time"
+              value={formData.time}
+              onChange={handleChange}
+              required
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Number of Questions:</label>
             <input
               type="number"
-              name="numberOfQuestions"
-              value={formData.numberOfQuestions}
+              name="number_of_questions"
+              value={formData.number_of_questions}
               onChange={handleChange}
               required
               style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
@@ -1153,7 +1178,7 @@ const ScheduleExamOverlay = ({ isOpen, onClose, onSubmit, batch }) => {
             <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Solutions:</label>
             <input
               type="file"
-              name="pdfFile"
+              name="solutions"
               onChange={handleChange}
               accept=".pdf"
               style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
