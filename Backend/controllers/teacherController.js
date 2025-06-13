@@ -174,6 +174,7 @@ export const studentsEnroll = async (req, res) => {
 
           await enrollment.save();
         }
+
         fs.unlink(csvFile, (err) => {
           if (err) {
             console.error('Error deleting uploaded CSV file:', err);
@@ -287,6 +288,7 @@ export const deleteExam = async (req, res) => {
     if (!exam) {
       return res.status(404).json({ message: 'Exam not found' });
     }
+    
 
     // Delete the associated file if it exists
     if (exam.solutions && typeof exam.solutions === 'string' && exam.solutions.trim() !== '') {
