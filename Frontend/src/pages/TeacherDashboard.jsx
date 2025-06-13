@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUserCircle } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { showMessage } from '../utils/Message'; // Assuming you have a utility for showing messages
 import { AppContext } from '../utils/AppContext';
 import { useContext } from 'react';
+import ProfileMenu from '../components/ProfileMenu';
+import ScheduleExamOverlay from '../components/ScheduleExamOverlay';
+import EnrollStudentsOverlay from '../components/EnrollStudentsOverlay';
 
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState('home');
@@ -17,6 +20,7 @@ export default function TeacherDashboard() {
   const [enrollOverlayOpen, setEnrollOverlayOpen] = useState(false); // State for enroll students overlay
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedBatch, setSelectedBatch] = useState(null);
+  const [exams, setExams] = useState([]); // State to manage exams
   const navigate = useNavigate();
   const { setRefreshApp } = useContext(AppContext);
 
@@ -89,6 +93,36 @@ export default function TeacherDashboard() {
       setSelectedBatchId("");
     }
   }, [selectedCourseId, coursesAndBatches]);
+
+  // Fetch exams whenever the active tab is 'exam'
+  useEffect(() => {
+    if (activeTab === 'exam') {
+      const fetchExams = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch('http://localhost:5000/api/teacher/teacher-exams', {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const data = await response.json();
+
+          if (Array.isArray(data.exams)) {
+            setExams(data.exams);
+          } else {
+            console.error('Invalid response format for exams:', data);
+            setExams([]);
+          }
+        } catch (error) {
+          console.error('Failed to fetch exams:', error);
+          setExams([]);
+        }
+      };
+
+      fetchExams();
+    }
+  }, [activeTab]);
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -249,6 +283,155 @@ export default function TeacherDashboard() {
     }
 
     setExamOverlayOpen(false);
+    // After scheduling, fetch the updated list of exams so the new one appears
+    try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:5000/api/teacher/teacher-exams', {
+      method: 'GET',
+      headers: {
+      Authorization: `Bearer ${token}`,
+      },
+    });
+    const data = await response.json();
+    if (Array.isArray(data.exams)) {
+      setExams(data.exams);
+    }
+    } catch (error) {
+    // Optionally handle error
+    }
+  };
+
+  // Handler for editing an exam
+  const handleEditExam = (exam) => {
+    setSelectedCourseId(exam.course._id);
+    setSelectedBatchId(exam.batch._id);
+    setExamOverlayOpen(true);
+    // Optionally, you can pre-fill the form fields with the exam data
+    // For example:
+    // setFormData({
+    //   name: exam.name,
+    //   date: exam.date.split('T')[0],
+    //   time: exam.time,
+    //   number_of_questions: exam.number_of_questions,
+    //   duration: exam.duration,
+    //   totalMarks: exam.totalMarks,
+    //   k: exam.k,
+    // });
+  };
+
+  function showDeleteExamDialog() {
+    return new Promise((resolve) => {
+      // Create overlay
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.top = 0;
+      overlay.style.left = 0;
+      overlay.style.width = '100vw';
+      overlay.style.height = '100vh';
+      overlay.style.background = 'rgba(0,0,0,0.45)';
+      overlay.style.display = 'flex';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+      overlay.style.zIndex = 9999;
+
+      // Create dialog
+      const dialog = document.createElement('div');
+      dialog.style.background = '#fff';
+      dialog.style.borderRadius = '14px';
+      dialog.style.boxShadow = '0 8px 32px rgba(192,57,43,0.18)';
+      dialog.style.padding = '2rem 2.5rem';
+      dialog.style.display = 'flex';
+      dialog.style.flexDirection = 'column';
+      dialog.style.alignItems = 'center';
+      dialog.style.minWidth = '320px';
+
+      const title = document.createElement('div');
+      title.innerText = 'Delete Exam?';
+      title.style.fontWeight = 'bold';
+      title.style.fontSize = '1.3rem';
+      title.style.color = '#c0392b';
+      title.style.marginBottom = '0.7rem';
+
+      const msg = document.createElement('div');
+      msg.innerText = 'Are you sure you want to delete this exam? This action cannot be undone.';
+      msg.style.color = '#3f3d56';
+      msg.style.fontSize = '1.05rem';
+      msg.style.marginBottom = '1.5rem';
+      msg.style.textAlign = 'center';
+
+      const btnRow = document.createElement('div');
+      btnRow.style.display = 'flex';
+      btnRow.style.gap = '1.5rem';
+
+      const yesBtn = document.createElement('button');
+      yesBtn.innerText = 'Delete';
+      yesBtn.style.background = '#c0392b';
+      yesBtn.style.color = '#fff';
+      yesBtn.style.border = 'none';
+      yesBtn.style.padding = '0.6rem 1.5rem';
+      yesBtn.style.borderRadius = '8px';
+      yesBtn.style.fontWeight = 'bold';
+      yesBtn.style.cursor = 'pointer';
+      yesBtn.style.fontSize = '1rem';
+
+      const noBtn = document.createElement('button');
+      noBtn.innerText = 'Cancel';
+      noBtn.style.background = '#e3e6f0';
+      noBtn.style.color = '#3f3d56';
+      noBtn.style.border = 'none';
+      noBtn.style.padding = '0.6rem 1.5rem';
+      noBtn.style.borderRadius = '8px';
+      noBtn.style.fontWeight = 'bold';
+      noBtn.style.cursor = 'pointer';
+      noBtn.style.fontSize = '1rem';
+
+      yesBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        resolve(true);
+      };
+      noBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        resolve(false);
+      };
+
+      btnRow.appendChild(yesBtn);
+      btnRow.appendChild(noBtn);
+
+      dialog.appendChild(title);
+      dialog.appendChild(msg);
+      dialog.appendChild(btnRow);
+
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+    });
+  }
+
+  // Handler for deleting an exam
+  const handleDeleteExam = async (examId) => {
+    const confirmDelete = await showDeleteExamDialog();
+
+    if (!confirmDelete) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/teacher/delete-exam/${examId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        showMessage('Exam deleted successfully!', 'success');
+        setExams(exams.filter(exam => exam._id !== examId)); // Remove the deleted exam from the state
+      } else {
+        const errorData = await response.json();
+        showMessage(`Error! ${errorData.message}`, 'error');
+      }
+    } catch (error) {
+      showMessage('An error occurred while deleting the exam.', 'error');
+      console.error(error);
+    }
   };
 
   return (
@@ -535,11 +718,12 @@ export default function TeacherDashboard() {
               <h2 style={{ ...sectionHeading, marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>
                 Exam Management
               </h2>
-              {/* Inline Row for Course & Batch Dropdowns */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', width: '100%' }}>
+
+              {/* Inline Row for Course, Batch Dropdowns, and Schedule Exam Button */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', width: '100%' }}>
                 {/* Course Dropdown */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '120px' }} htmlFor="courseDropdown">Course</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 auto' }}>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap' }} htmlFor="courseDropdown">Course</label>
                   <select
                     id="courseDropdown"
                     value={selectedCourseId}
@@ -562,8 +746,8 @@ export default function TeacherDashboard() {
                 </div>
 
                 {/* Batch Dropdown */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '120px' }} htmlFor="batchDropdown">Batch</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 auto' }}>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap' }} htmlFor="batchDropdown">Batch</label>
                   <select
                     id="batchDropdown"
                     value={selectedBatchId}
@@ -586,12 +770,11 @@ export default function TeacherDashboard() {
                   </select>
                 </div>
 
-                {/* Schedule Evaluation Button */}
+                {/* Schedule Exam Button */}
                 <button
                   onClick={handleScheduleExam}
                   disabled={!selectedCourseId || !selectedBatchId} // Button is disabled if either course or batch is not selected
                   style={{
-                    marginLeft: 'auto',
                     padding: '0.6rem 1.2rem',
                     borderRadius: '12px',
                     backgroundColor: selectedCourseId && selectedBatchId ? '#4b3c70' : '#a0a0a0', // Change color based on enabled/disabled state
@@ -604,6 +787,87 @@ export default function TeacherDashboard() {
                 >
                   Schedule Exam
                 </button>
+              </div>
+
+              {/* List of Exams */}
+              <div style={{ marginTop: '2rem', maxHeight: '350px', border: '1px solid #ddd', borderRadius: '12px' }}>
+                <h3 style={{ color: '#3f3d56', fontWeight: 'bold', marginBottom: '1rem' }}>Exams</h3>
+                <div style={{ maxHeight: '300px', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  <table style={{ width: '100%', overflowX: 'auto', overflowY: 'auto', borderCollapse: 'collapse', borderRadius: '12px' }}>
+                    <thead style={{ backgroundColor: '#4b3c70', color: '#ffffff', position: 'sticky', top: 0, zIndex: 1 }}>
+                      <tr>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Exam Name</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Batch</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Date</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Time</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>No. of questions</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Duration</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Total Marks</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>K</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Total Students</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Solutions</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {exams.map(exam => (
+                        <tr key={exam._id} style={{ borderBottom: '1px solid #ddd' }}>
+                          <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.name}</td>
+                          <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.batch}</td>
+                          <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.date}</td>
+                          <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.time}</td>
+                          <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.number_of_questions}</td>
+                          <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.duration} mins</td>
+                          <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.totalMarks}</td>
+                          <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.k}</td>
+                          <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.total_students}</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            {typeof exam.solutions === 'string' && exam.solutions.trim() !== '' ? (
+                              <a href={`http://localhost:5000/${exam.solutions}`} target="_blank" rel="noopener noreferrer">View Solutions</a>
+                            ) : (
+                              'No Solutions Available'
+                            )}
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                              <button
+                                onClick={() => handleEditExam(exam)}
+                                style={{
+                                  padding: '0.5rem 1rem',
+                                  borderRadius: '8px',
+                                  color: ' #ffffff',
+                                  background: 'none',
+                                  border: '#2c3e50 1px solid',
+                                  fontSize: '0.95rem',
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <FaEdit style={{ color: 'rgb(2, 75, 30)', fontSize: '1.2rem' }}  />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteExam(exam._id)}
+                                style={{
+                                  padding: '0.5rem 1rem',
+                                  borderRadius: '8px',
+                                  color: ' #ffffff',
+                                  background: 'none',
+                                  border: '#c0392b 1px solid',
+                                  fontSize: '0.95rem',
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer',
+                                }}
+                                title="Delete"
+                              >
+                                <FaTrashAlt style={{ color: '#c0392b', fontSize: '1.2rem' }} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -732,108 +996,24 @@ export default function TeacherDashboard() {
             width: 180px;
           }
         }
+        @media (max-width: 700px) {
+          div[style*="overflowY: 'auto'"]::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+          }
+
+          div[style*="overflowY: 'auto'"]::-webkit-scrollbar-thumb {
+            background-color: #d3d3d3; /* Light color for scrollbar thumb */
+            border-radius: 4px;
+          }
+
+          div[style*="overflowY: 'auto'"]::-webkit-scrollbar-track {
+            background-color: #f0f0f0; /* Light color for scrollbar track */
+            border-radius: 4px;
+          }
+        }
       `}
       </style>
-    </div>
-  );
-}
-
-// ProfileMenu component for top right profile icon and dropdown
-function ProfileMenu({ user, onLogout, onProfile }) {
-  const [open, setOpen] = useState(false);
-  const handleMenu = () => setOpen(o => !o);
-  const handleProfile = () => {
-    setOpen(false);
-    onProfile();
-  };
-  const handleLogout = () => {
-    setOpen(false);
-    onLogout();
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (open && !event.target.closest('.profile-menu-container')) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [open]);
-
-  return (
-    <div style={{ position: 'relative' }}>
-      <button
-        onClick={handleMenu}
-        style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 0,
-          margin: 0,
-          outline: 'none',
-        }}
-        aria-label="Profile menu"
-      >
-        <FaUserCircle size={38} color="#4a4e69" />
-      </button>
-      {open && (
-        <div style={{
-          position: 'absolute',
-          top: 44,
-          right: 0,
-          background: '#fff',
-          borderRadius: 12,
-          boxShadow: '0 4px 16px rgba(60,60,120,0.13)',
-          minWidth: 180,
-          padding: '0.5rem 0',
-          zIndex: 100,
-          border: '1px solid #e3e6f0',
-        }} className="profile-menu-container">
-          <div style={{ padding: '0.75rem 1.25rem', color: '#3f3d56', fontWeight: 600, borderBottom: '1px solid #f0f0f0' }}>
-            {user.name || 'User'}
-          </div>
-          <button
-            onClick={handleProfile}
-            style={{
-              width: '100%',
-              background: 'none',
-              border: 'none',
-              color: '#4a4e69',
-              fontWeight: 500,
-              fontSize: '1rem',
-              textAlign: 'left',
-              padding: '0.75rem 1.25rem',
-              cursor: 'pointer',
-              borderBottom: '1px solid #f0f0f0',
-              transition: 'background 0.15s',
-            }}
-          >
-            👤 Profile
-          </button>
-          <button
-            onClick={handleLogout}
-            style={{
-              width: '100%',
-              background: 'none',
-              border: 'none',
-              color: '#c0392b',
-              fontWeight: 500,
-              fontSize: '1rem',
-              textAlign: 'left',
-              padding: '0.75rem 1.25rem',
-              cursor: 'pointer',
-              transition: 'background 0.15s',
-            }}
-          >
-            🚪 Logout
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -932,269 +1112,4 @@ const sectionHeading = {
   fontWeight: 'bold',
   color: '#3f3d56',
   marginBottom: '1.25rem'
-};
-
-// Fixed JSX and syntax issues in the EnrollStudentsOverlay component
-const EnrollStudentsOverlay = ({ isOpen, onClose, onSubmit, course, batch, closeOnOutsideClick }) => {
-  const [csvFile, setCsvFile] = useState(null);
-
-  const handleFileChange = (e) => {
-    setCsvFile(e.target.files[0]);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!csvFile) {
-      alert('Please upload a CSV file.');
-      return;
-    }
-    if (!course || !batch) {
-      alert('Course and batch are required.');
-      return;
-    }
-    onSubmit({ csvFile, course, batch });
-  };
-
-  useEffect(() => {
-    if (closeOnOutsideClick && isOpen) {
-      const handleClickOutside = (event) => {
-        if (isOpen && !event.target.closest('.overlay-content')) {
-          onClose();
-        }
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [isOpen, onClose, closeOnOutsideClick]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="overlay" style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000,
-    }}>
-      <div className="overlay-content" style={{
-        backgroundColor: '#fff',
-        padding: '2rem',
-        borderRadius: '8px',
-        width: '400px',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-      }}>
-        <h2 style={{ color: '#3f3d56', marginBottom: '1rem' }}>Enroll Students</h2>
-        <form onSubmit={handleSubmit} encType="multipart/form-data" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Upload CSV:</label>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              required
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
-            />
-          </div>
-          {/* Show course and batch info, not as input */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Course:</label>
-            <span style={{ color: '#3f3d56' }}>{course.name}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Batch:</label>
-            <span style={{ color: '#3f3d56' }}>{batch.name}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-            <button type="submit" style={{ padding: '0.5rem 1rem', borderRadius: '4px', backgroundColor: '#4b3c70', color: '#fff', border: 'none', cursor: 'pointer' }}>
-              Submit
-            </button>
-            <button type="button" onClick={onClose} style={{ padding: '0.5rem 1rem', borderRadius: '4px', backgroundColor: '#ccc', color: '#000', border: 'none', cursor: 'pointer' }}>
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-const ScheduleExamOverlay = ({ isOpen, onClose, onSubmit, batch }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    date: '',
-    time: '',
-    number_of_questions: '',
-    duration: '',
-    totalMarks: '',
-    k: '',
-    solutions: null,
-  });
-
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: files ? files[0] : value,
-    }));
-  };
-
-  const handleScheduleExamSubmit = (e) => {
-    e.preventDefault();
-    onSubmit({ ...formData, batch });
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (isOpen && !event.target.closest('.overlay-content')) {
-        onClose();
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="overlay" style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000,
-    }}>
-      <div className="overlay-content" style={{
-        backgroundColor: '#fff',
-        padding: '2rem',
-        borderRadius: '8px',
-        width: '400px',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-      }}>
-        <h2 style={{ color: '#3f3d56', marginBottom: '1rem' }}>Schedule Exam</h2>
-        {/* Updated the overlay form to display labels and input fields in a single line with individual fields for editing */}
-        <form onSubmit={handleScheduleExamSubmit} encType="multipart/form-data" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Name:</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Date:</label>
-            <input
-              type="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              required
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Time (24-hour):</label>
-            <input
-              type="time"
-              name="time"
-              value={formData.time}
-              onChange={handleChange}
-              required
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Number of Questions:</label>
-            <input
-              type="number"
-              name="number_of_questions"
-              value={formData.number_of_questions}
-              onChange={handleChange}
-              required
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Duration (in mins.):</label>
-            <input
-              type="number"
-              name="duration"
-              value={formData.duration}
-              onChange={handleChange}
-              required
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Total Marks:</label>
-            <input
-              type="number"
-              name="totalMarks"
-              value={formData.totalMarks}
-              onChange={handleChange}
-              required
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>No of Peers (K):</label>
-            <input
-              type="number"
-              name="k"
-              value={formData.k}
-              onChange={handleChange}
-              required
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Solutions:</label>
-            <input
-              type="file"
-              name="solutions"
-              onChange={handleChange}
-              accept=".pdf"
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-            <button type="submit" style={{ padding: '0.5rem 1rem', borderRadius: '4px', backgroundColor: '#4b3c70', color: '#fff', border: 'none', cursor: 'pointer' }}>
-              Submit
-            </button>
-            <button type="button" onClick={onClose} style={{ padding: '0.5rem 1rem', borderRadius: '4px', backgroundColor: '#ccc', color: '#000', border: 'none', cursor: 'pointer' }}>
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
 };

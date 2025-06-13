@@ -174,6 +174,11 @@ export const studentsEnroll = async (req, res) => {
 
           await enrollment.save();
         }
+        fs.unlink(csvFile, (err) => {
+          if (err) {
+            console.error('Error deleting uploaded CSV file:', err);
+          }
+        });
 
         res.status(200).json({ message: 'Students enrolled successfully.' });
       });
@@ -246,5 +251,58 @@ export const scheduleExam = async (req, res) => {
   } catch (error) {
     console.error('Error scheduling exam:', error);
     res.status(500).json({ message: 'An error occurred while scheduling the exam.' });
+  }
+};
+
+export const getExamsForTeacher = async (req, res) => {
+  try {
+    const teacherId = req.user._id; // Assuming req.user contains the authenticated teacher's info
+    const examss = await Examination.find({ createdBy: teacherId })
+      .populate({
+      path: 'batch',
+      select: 'batchId'
+      })
+      .lean();
+
+    // Map exams to include only batchId in batch field
+    const exams = examss.map(exam => ({
+      ...exam,
+      batch: exam.batch ? exam.batch.batchId : null
+    }));
+
+    res.status(200).json({ exams });
+  } catch (error) {
+    console.error('Error fetching exams:', error);
+    res.status(500).json({ message: 'Failed to fetch exams' });
+  }
+};
+
+export const deleteExam = async (req, res) => {
+  try {
+    const examId = req.params.id;
+
+    // Find the exam first
+    const exam = await Examination.findById(examId);
+
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+
+    // Delete the associated file if it exists
+    if (exam.solutions && typeof exam.solutions === 'string' && exam.solutions.trim() !== '') {
+      fs.unlink(exam.solutions, (err) => {
+        if (err && err.code !== 'ENOENT') {
+          console.error('Error deleting solutions file:', err);
+        }
+      });
+    }
+
+    // Delete the exam document
+    await Examination.findByIdAndDelete(examId);
+
+    res.status(200).json({ message: 'Exam deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting exam:', error);
+    res.status(500).json({ message: 'Failed to delete exam' });
   }
 };
