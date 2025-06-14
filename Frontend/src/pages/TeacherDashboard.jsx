@@ -7,6 +7,7 @@ import { useContext } from 'react';
 import ProfileMenu from '../components/ProfileMenu';
 import ScheduleExamOverlay from '../components/ScheduleExamOverlay';
 import EnrollStudentsOverlay from '../components/EnrollStudentsOverlay';
+import EditExamOverlay from '../components/EditExamOverlay';
 
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState('home');
@@ -22,6 +23,8 @@ export default function TeacherDashboard() {
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [exams, setExams] = useState([]); // State to manage exams
   const navigate = useNavigate();
+  const [isEditExamOverlayOpen, setEditExamOverlayOpen] = useState(false);
+  const [selectedExam, setSelectedExam] = useState(null);
   const { setRefreshApp } = useContext(AppContext);
 
   useEffect(() => {
@@ -285,38 +288,91 @@ export default function TeacherDashboard() {
     setExamOverlayOpen(false);
     // After scheduling, fetch the updated list of exams so the new one appears
     try {
-    const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5000/api/teacher/teacher-exams', {
-      method: 'GET',
-      headers: {
-      Authorization: `Bearer ${token}`,
-      },
-    });
-    const data = await response.json();
-    if (Array.isArray(data.exams)) {
-      setExams(data.exams);
-    }
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/teacher/teacher-exams', {
+        method: 'GET',
+        headers: {
+        Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (Array.isArray(data.exams)) {
+        setExams(data.exams);
+      }
     } catch (error) {
     // Optionally handle error
     }
   };
 
-  // Handler for editing an exam
-  const handleEditExam = (exam) => {
-    setSelectedCourseId(exam.course._id);
-    setSelectedBatchId(exam.batch._id);
-    setExamOverlayOpen(true);
-    // Optionally, you can pre-fill the form fields with the exam data
-    // For example:
-    // setFormData({
-    //   name: exam.name,
-    //   date: exam.date.split('T')[0],
-    //   time: exam.time,
-    //   number_of_questions: exam.number_of_questions,
-    //   duration: exam.duration,
-    //   totalMarks: exam.totalMarks,
-    //   k: exam.k,
-    // });
+  const handleEditClick = (exam) => {
+    // console.log('Selected Exam for Edit:', exam);
+    if (!isEditExamOverlayOpen) {
+      setSelectedExam(exam);
+      setEditExamOverlayOpen(true);
+    }
+  };
+
+  const handleEditExamOverlayClose = () => {
+    setEditExamOverlayOpen(false);
+    setSelectedExam(null);
+  };
+
+  const handleEditExamOverlaySubmit = async (updatedExam) => {
+    try {
+      const token = localStorage.getItem('token');
+      const editFormDataToSend = new FormData();
+      editFormDataToSend.append('name', updatedExam.name);
+      editFormDataToSend.append('date', updatedExam.date);
+      editFormDataToSend.append('time', updatedExam.time);
+      editFormDataToSend.append('number_of_questions', updatedExam.number_of_questions);
+      editFormDataToSend.append('duration', updatedExam.duration);
+      editFormDataToSend.append('totalMarks', updatedExam.totalMarks);
+      editFormDataToSend.append('k', updatedExam.k);
+      editFormDataToSend.append('total_students', updatedExam.total_students || 0);
+      if (updatedExam.solutions) {
+        editFormDataToSend.append('solutions', updatedExam.solutions);
+      }
+      console.log('Exam id', updatedExam._id);
+      const response = await fetch(`http://localhost:5000/api/teacher/update-exam/${updatedExam._id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: editFormDataToSend,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showMessage('Exam updated successfully!', 'success');
+        // setExams((prevExams) =>
+        //   prevExams.map((exam) => (exam.id === updatedExam.id ? { ...exam, ...updatedExam } : exam))
+        // );
+      } else {
+        const errorData = await response.json();
+        showMessage(`Error! ${errorData.message || 'Failed to update exam.'}`, 'error');
+      }
+    } catch (error) {
+      showMessage('An error occurred while updating the exam.', 'error');
+      console.error(error);
+    }
+
+    setEditExamOverlayOpen(false);
+    setSelectedExam(null);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/teacher/teacher-exams', {
+        method: 'GET',
+        headers: {
+        Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (Array.isArray(data.exams)) {
+        setExams(data.exams);
+      }
+    } catch (error) {
+    // Optionally handle error
+    }
   };
 
   function showDeleteExamDialog() {
@@ -814,7 +870,14 @@ export default function TeacherDashboard() {
                         <tr key={exam._id} style={{ borderBottom: '1px solid #ddd' }}>
                           <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.name}</td>
                           <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.batch}</td>
-                          <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.date}</td>
+                          {/* <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.date}</td> */}
+                          <td style={{ padding: '12px', color: '#3f3d56' }}>
+                            {new Date(exam.date).toLocaleDateString('en-IN', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                            })}
+                          </td>
                           <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.time}</td>
                           <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.number_of_questions}</td>
                           <td style={{ padding: '12px', color: '#3f3d56' }}>{exam.duration} mins</td>
@@ -831,7 +894,7 @@ export default function TeacherDashboard() {
                           <td style={{ padding: '12px' }}>
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                               <button
-                                onClick={() => handleEditExam(exam)}
+                                onClick={() => handleEditClick(exam)}
                                 style={{
                                   padding: '0.5rem 1rem',
                                   borderRadius: '8px',
@@ -892,6 +955,16 @@ export default function TeacherDashboard() {
         batch={selectedBatch}
         closeOnOutsideClick={true} // Added prop to enable closing on outside click
       />
+
+      {/* EditExamOverlay */}
+      {isEditExamOverlayOpen && selectedExam && (
+        <EditExamOverlay
+          isOpen={isEditExamOverlayOpen}
+          exam={selectedExam}
+          onClose={handleEditExamOverlayClose}
+          onSubmit={handleEditExamOverlaySubmit}
+        />
+      )}
 
       {/* Responsive styles */}
       <style>

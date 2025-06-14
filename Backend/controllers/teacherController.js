@@ -278,6 +278,51 @@ export const getExamsForTeacher = async (req, res) => {
   }
 };
 
+export const updateExam = async (req, res) => {
+  try {
+    const examId = req.params.id;
+    const { name, date, time, number_of_questions, duration, totalMarks, k, total_students } = req.body;
+    const solutions = req.file ? req.file.path : null;
+
+    // Find the exam first
+    const exam = await Examination.findById(examId);
+
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+
+    // Update exam details
+    exam.name = name || exam.name;
+    exam.date = date || exam.date;
+    exam.time = time || exam.time;
+    exam.number_of_questions = number_of_questions || exam.number_of_questions;
+    exam.duration = duration || exam.duration;
+    exam.totalMarks = totalMarks || exam.totalMarks;
+    exam.k = k || exam.k;
+    exam.total_students = total_students || exam.total_students;
+
+    // Update solutions file if provided
+    if (solutions) {
+      // Delete old solutions file if it exists
+      if (exam.solutions && typeof exam.solutions === 'string' && exam.solutions.trim() !== '') {
+        fs.unlink(exam.solutions, (err) => {
+          if (err && err.code !== 'ENOENT') {
+            console.error('Error deleting old solutions file:', err);
+          }
+        });
+      }
+      exam.solutions = solutions;
+    }
+
+    await exam.save();
+
+    res.status(200).json({ message: 'Exam updated successfully', exam });
+  } catch (error) {
+    console.error('Error updating exam:', error);
+    res.status(500).json({ message: 'Failed to update exam' });
+  }
+};
+
 export const deleteExam = async (req, res) => {
   try {
     const examId = req.params.id;
