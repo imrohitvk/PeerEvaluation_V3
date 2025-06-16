@@ -15,6 +15,15 @@ BatchSchema.pre('save', async function(next) {
     next();
 });
 
+BatchSchema.pre('findOneAndDelete', async function(next) {
+  const batch = await this.model.findOne(this.getQuery());
+  if (batch) {
+    await mongoose.model('Enrollment').deleteMany({ batch: batch._id });
+    await mongoose.model('Examination').deleteMany({ batch: batch._id });
+  }
+  next();
+});
+
 // Remove batches when a referenced course is deleted
 mongoose.model('Course').schema.pre('findOneAndDelete', async function(next) {
     const doc = await this.model.findOne(this.getQuery());

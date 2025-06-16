@@ -7,6 +7,8 @@ import sendEmail from '../utils/sendEmail.js';
 import { Course } from '../models/Course.js';
 import emailExistence from 'email-existence';
 import { Batch } from '../models/Batch.js';
+import { Enrollment } from '../models/Enrollment.js';
+import { Examination } from '../models/Examination.js';
 import mongoose from 'mongoose';
 
 
@@ -164,8 +166,18 @@ export const deleteCourse = async (req, res) => {
       return res.status(404).json({ message: 'Course not found.' });
     }
 
+     // Delete all batches associated with this course
+    const batches = await Batch.find({ course: course._id });
+    const batchIds = batches.map(batch => batch._id);
+
     // Delete all batches associated with this course
     await Batch.deleteMany({ course: course._id });
+
+    // Delete all enrollments associated with this course
+    await Enrollment.deleteMany({ course: courseId });
+
+    // Delete all examinations associated with the batches of this course
+    await Examination.deleteMany({ batch: { $in: batchIds } });
 
     // Delete the course
     await Course.findByIdAndDelete(courseId);
@@ -180,6 +192,12 @@ export const deleteCourse = async (req, res) => {
 export const deleteBatch = async (req, res) => {
   try {
     const { batchId } = req.params;
+
+    // Delete all enrollments associated with the batch
+    await Enrollment.deleteMany({ batch: batchId }); 
+
+    // Delete all exams associated with the batch
+    await Examination.deleteMany({ batch: batchId });
 
     const deletedBatch = await Batch.findByIdAndDelete(batchId);
 

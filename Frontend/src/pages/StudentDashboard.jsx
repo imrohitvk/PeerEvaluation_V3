@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ProfileMenu from '../components/ProfileMenu';
+import ProfileMenu from '../components/User/ProfileMenu';
 
 export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState('home');
