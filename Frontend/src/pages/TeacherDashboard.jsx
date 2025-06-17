@@ -10,6 +10,7 @@ import ScheduleExamOverlay from '../components/Teacher/ScheduleExamOverlay.jsx';
 import EnrollStudentsOverlay from '../components/Teacher/EnrollStudentsOverlay.jsx';
 import EditExamOverlay from '../components/Teacher/EditExamOverlay.jsx';
 import ExamList from '../components/Teacher/ExamList.jsx';
+import BulkUploadOverlay from '../components/Teacher/BulkUploadOverlay.jsx';
 
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState('home');
@@ -27,6 +28,8 @@ export default function TeacherDashboard() {
   const navigate = useNavigate();
   const [isEditExamOverlayOpen, setEditExamOverlayOpen] = useState(false);
   const [selectedExam, setSelectedExam] = useState(null);
+  const [bulkUploadOverlayOpen, setBulkUploadOverlayOpen] = useState(false); // State for bulk upload overlay
+  const [selectedExamForBulkUpload, setSelectedExamForBulkUpload] = useState(null); // State for selected exam
   const { setRefreshApp } = useContext(AppContext);
 
   useEffect(() => {
@@ -183,6 +186,16 @@ export default function TeacherDashboard() {
 
   const handleExamOverlayClose = () => {
     setExamOverlayOpen(false);
+  };
+
+  const handleBulkUploadClick = (examId) => {
+    setSelectedExamForBulkUpload(examId);
+    setBulkUploadOverlayOpen(true);
+  };
+
+  const handleBulkUploadOverlayClose = () => {
+    setBulkUploadOverlayOpen(false);
+    setSelectedExamForBulkUpload(null);
   };
 
   // New handler for enrolling students
@@ -376,6 +389,80 @@ export default function TeacherDashboard() {
     }
   };
 
+  const handleDownloadPDF = async (examId) => {
+    console.log('Downloading PDF for exam:', examId);
+    try {
+      const token = localStorage.getItem('token'); // Retrieve the token from localStorage or another storage mechanism
+
+      const response = await fetch(`http://localhost:5000/api/teacher/download-pdf/${examId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`, // Include the token in the Authorization header
+        },
+      });
+
+      if (response.ok) {
+        const blob = await response.blob(); // Handle the response as a blob
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Exam_${examId}_QR_Codes.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        const errorText = await response.text(); // Read the error message as text
+        console.error('Failed to download PDF:', errorText);
+        showMessage(`Failed to download PDF: ${errorText}`, 'error');
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      showMessage(`Error downloading PDF: ${error.message}`, 'error');
+    }
+  };
+
+  const handleBulkUpload = async (files) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('documents', file));
+    formData.append('examId', selectedExamForBulkUpload); // Include examId in the request
+
+    try {
+      const response = await fetch('http://localhost:5000/api/teacher/bulk-upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Bulk upload successful:', result);
+        setBulkUploadOverlayOpen(false);
+      } else {
+        console.error('Bulk upload failed');
+      }
+    } catch (error) {
+      console.error('Error during bulk upload:', error);
+    }
+  };
+
+  const handleSendEvaluation = async (examId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/teacher/send-evaluation/${examId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        showMessage('Evaluation sent successfully!', 'success');
+      } else {
+        showMessage('Failed to send evaluation', 'error');
+      }
+    } catch (error) {
+      showMessage('An error occurred while sending the evaluation.', 'error');
+    }
+  };
+
   function showDeleteExamDialog() {
     return new Promise((resolve) => {
       // Create overlay
@@ -490,6 +577,7 @@ export default function TeacherDashboard() {
       console.error(error);
     }
   };
+
 
   return (
     <div
@@ -847,7 +935,14 @@ export default function TeacherDashboard() {
               </div>
 
               {/* List of Exams */}
-              <ExamList exams={exams} handleEditClick={handleEditClick} handleDeleteExam={handleDeleteExam} />
+              <ExamList 
+                exams={exams} 
+                handleEditClick={handleEditClick} 
+                handleDownloadPDF={handleDownloadPDF} 
+                handleBulkUploadClick={handleBulkUploadClick} 
+                handleSendEvaluation={handleSendEvaluation} 
+                handleDeleteExam={handleDeleteExam} 
+              />
             </div>
           )}
           
@@ -879,6 +974,14 @@ export default function TeacherDashboard() {
           exam={selectedExam}
           onClose={handleEditExamOverlayClose}
           onSubmit={handleEditExamOverlaySubmit}
+        />
+      )}
+
+      {bulkUploadOverlayOpen && (
+        <BulkUploadOverlay
+          examId={selectedExamForBulkUpload} // Pass the selected exam ID
+          onClose={handleBulkUploadOverlayClose} // Close handler
+          onUpload={handleBulkUpload} // Upload handler
         />
       )}
     </div>

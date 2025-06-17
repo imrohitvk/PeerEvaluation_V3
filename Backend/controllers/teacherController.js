@@ -3,12 +3,18 @@ import { Course } from '../models/Course.js';
 import { User } from '../models/User.js';
 import { Enrollment } from '../models/Enrollment.js';
 import { Examination } from '../models/Examination.js';
+import { Document } from '../models/Document.js';
+import { UIDMap } from '../models/UIDMap.js';
 import csv from 'csv-parser';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import sendEmail from '../utils/sendEmail.js';
+import extractUserIdFromQR from '../utils/extractUserIdFromQR.js'; // Assuming you have a utility function for OCR
 import emailExistence from 'email-existence';
 import { Parser } from 'json2csv';
+import PDFDocument from 'pdfkit';
+import QRCode from 'qrcode';
+import mongoose from 'mongoose';
 
 
 // Generate a strong random password: min 8 chars, at least 1 uppercase, 1 lowercase, 1 number, 1 special char
@@ -351,5 +357,117 @@ export const deleteExam = async (req, res) => {
   } catch (error) {
     console.error('Error deleting exam:', error);
     res.status(500).json({ message: 'Failed to delete exam' });
+  }
+};
+
+export const downloadPDF = async (req, res) => {
+  const { examId } = req.params;
+
+  try {
+    const exam = await Examination.findById(examId);
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found.' });
+    }
+    const batchId = exam.batch;
+
+    const enrollments = await Enrollment.find({ batch: batchId }).populate('student');
+    if (!enrollments.length) {
+      return res.status(404).json({ message: 'No students enrolled for this batch.' });
+    }
+
+    const doc = new PDFDocument();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Exam_${examId}_QR_Codes.pdf`);
+
+    doc.pipe(res);
+
+    for (const enrollment of enrollments) {
+      const userId = enrollment.student._id; 
+
+      let uidMapEntry = await UIDMap.findOne({ userId, examId });
+      let uniqueId;
+
+      if (uidMapEntry) {
+        uniqueId = uidMapEntry.uniqueId;
+      } else {
+        uniqueId = new mongoose.Types.ObjectId().toString(); 
+
+        try {
+          uidMapEntry = await UIDMap.create({ uniqueId, userId, examId });
+        } catch (error) {
+          if (error.code === 11000) {
+            continue; 
+          } else {
+            return res.status(500).json({ message: 'Failed to create UIDMap entry.' });
+          }
+        }
+      }
+
+      // Generate QR code
+      const qrCodeData = await QRCode.toDataURL(uniqueId);
+
+      // Add a new page to the PDF
+      // doc.addPage();
+      doc.image(qrCodeData, { fit: [100, 100], align: 'center' });
+      doc.text(`User ID: ${enrollment.student.email}`, { align: 'center' });
+      doc.text(`User Name: ${enrollment.student.name}`, { align: 'center' });
+      doc.addPage();
+      doc.image(qrCodeData, { fit: [100, 100], align: 'center' });
+      
+    }
+
+    doc.end();
+  } catch (error) {
+    res.status(500).json({ message: 'Error generating PDF' });
+
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Failed to generate PDF' });
+    }
+  }
+};
+
+//TODO: Bulk upload documents for evaluation
+export const bulkUploadDocuments = async (req, res) => {
+  try {
+    const { examId } = req.body; // Get examId from the request body
+    const uploadedBy = req.user._id; // Assuming user authentication is implemented
+    const files = req.files;
+
+    const documents = await Promise.all(
+      files.map(async (file) => {
+        const uniqueId = await extractUserIdFromQR(file.path); // Extract uniqueId using OCR
+        return new Document({
+          uniqueId,
+          examId,
+          uploadedBy,
+          documentPath: file.path,
+        });
+      })
+    );
+
+    await Document.insertMany(documents);
+
+    res.status(200).json({ message: 'Documents uploaded successfully', documents });
+  } catch (error) {
+    console.error('Error during bulk upload:', error);
+    res.status(500).json({ message: 'Failed to upload documents' });
+  }
+};
+
+// TODO: Implement the logic to send evaluations to students
+export const sendEvaluation = async (req, res) => {
+  const { examId } = req.params;
+
+  if (!examId) {
+    return res.status(400).json({ message: 'Exam ID is required' });
+  }
+
+
+
+  try {
+    // Replace with actual evaluation logic
+    res.status(200).json({ message: 'Evaluation sent successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to send evaluation' });
   }
 };

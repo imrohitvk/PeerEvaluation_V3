@@ -1,6 +1,6 @@
 import express from 'express';
 import { protect, adminOrTeacherOnly } from '../middleware/authMiddleware.js';
-import { deleteExam, getEnrolledStudents, getExamsForTeacher, getTeacherCoursesAndBatches, scheduleExam, studentsEnroll, updateExam } from '../controllers/teacherController.js';
+import { bulkUploadDocuments, deleteExam, downloadPDF, getEnrolledStudents, getExamsForTeacher, getTeacherCoursesAndBatches, scheduleExam, sendEvaluation, studentsEnroll, updateExam } from '../controllers/teacherController.js';
 // import multer from 'multer';
 import upload from '../utils/fileUpload.js'; // Assuming you have a fileUpload.js for handling file uploads
 
@@ -13,6 +13,9 @@ router.get('/enrolled-students', protect, adminOrTeacherOnly, getEnrolledStudent
 router.post('/exam-schedule', protect, adminOrTeacherOnly, upload.single('solutions'), scheduleExam);
 router.get('/teacher-exams', protect, adminOrTeacherOnly, getExamsForTeacher);
 router.put('/update-exam/:id', protect, adminOrTeacherOnly, upload.single('solutions'), updateExam);
+router.get('/download-pdf/:examId', protect, adminOrTeacherOnly, downloadPDF);
+router.post('/bulk-upload', protect, adminOrTeacherOnly, upload.array('documents'), bulkUploadDocuments);
+router.post('/send-evaluation/:id', protect, adminOrTeacherOnly, sendEvaluation);
 router.delete('/delete-exam/:id', protect, adminOrTeacherOnly, deleteExam);
 
 export default router;
