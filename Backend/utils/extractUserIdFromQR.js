@@ -1,48 +1,74 @@
+import poppler from 'pdf-poppler';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import fs from 'fs';
-import { createWorker } from 'tesseract.js';
-import QRCode from 'qrcode-reader';
-// import Jimp from 'jimp';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const Jimp = require('jimp');
+const QrCode = require('qrcode-reader');
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
- * Extracts the user ID (email ID) from a QR code in the document.
+ * Extracts the unique ID from a QR code in the document.
  * @param {string} filePath - Path to the PDF file.
- * @returns {Promise<string>} - Extracted email ID from the QR code.
+ * @returns {Promise<string>} - Extracted unique ID from the QR code.
  */
 const extractUserIdFromQR = async (filePath) => {
   try {
-    // // Step 1: Convert PDF to image (first page only)
-    // const pdfToImage = require('pdf-to-image');
-    // const imagePath = await pdfToImage.convert(filePath, { singlePage: true });
+    const outputDir = path.join(__dirname, 'temp');
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir);
+    }
 
-    // // Step 2: Load the image using Jimp
-    // const image = await Jimp.read(imagePath);
+    const options = {
+      format: 'jpeg',
+      out_dir: outputDir,
+      out_prefix: 'page',
+      page: 1,
+    };
 
-    // // Step 3: Initialize QRCode reader
-    // const qr = new QRCode();
+    await poppler.convert(filePath, options);
+    const imagePath = path.join(outputDir, 'page-1.jpg');
 
-    // return new Promise((resolve, reject) => {
-    //   qr.callback = (err, value) => {
-    //     if (err) {
-    //       reject('Failed to read QR code');
-    //     } else {
-    //       // Step 4: Extract email ID from QR code data
-    //       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    //       const email = value.result.match(emailRegex)?.[0];
-    //       if (email) {
-    //         resolve(email);
-    //       } else {
-    //         reject('No valid email found in QR code');
-    //       }
-    //     }
-    //   };
+    const image = await Jimp.read(imagePath);
 
-    //   // Step 5: Decode QR code
-    //   qr.decode(image.bitmap);
-    // });
-    console.log('Extracting user ID from QR code...');
+    const croppedImage = image.crop(
+      0,
+      0,
+      image.bitmap.width / 3,
+      image.bitmap.height / 3
+    );
+    croppedImage.greyscale().contrast(1).resize(500, 500);
+
+    const processedImagePath = path.join(outputDir, 'processed-page-1.jpg');
+    await croppedImage.writeAsync(processedImagePath);
+
+    const processedJimpImage = await Jimp.read(processedImagePath);
+    
+    return new Promise((resolve, reject) => {
+      const qr = new QrCode();
+      qr.callback = function (err, value) {
+        if (err || !value) {
+          console.error('Failed to decode QR code:', err);
+          reject(new Error('Failed to read QR code'));
+        } else {
+          // console.log('QR code decoded successfully:', value.result);
+          resolve(value.result);
+        }
+      };
+      qr.decode(processedJimpImage.bitmap);
+    });
   } catch (error) {
-    console.error('Error extracting user ID from QR:', error);
-    throw new Error('Failed to extract user ID from QR code');
+    console.error('Error extracting unique ID from QR:', error);
+    throw new Error('Failed to extract unique ID from QR code');
+  } finally {
+    // Clean up temporary files
+    const tempDir = path.join(__dirname, 'temp');
+    if (fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   }
 };
 

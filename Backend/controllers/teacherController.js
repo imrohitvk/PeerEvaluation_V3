@@ -9,7 +9,7 @@ import csv from 'csv-parser';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import sendEmail from '../utils/sendEmail.js';
-import extractUserIdFromQR from '../utils/extractUserIdFromQR.js'; // Assuming you have a utility function for OCR
+import extractUserIdFromQR from '../utils/extractUserIdFromQR.js'; 
 import emailExistence from 'email-existence';
 import { Parser } from 'json2csv';
 import PDFDocument from 'pdfkit';
@@ -17,7 +17,6 @@ import QRCode from 'qrcode';
 import mongoose from 'mongoose';
 
 
-// Generate a strong random password: min 8 chars, at least 1 uppercase, 1 lowercase, 1 number, 1 special char
 function generateStrongPassword() {
   const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const lower = 'abcdefghijklmnopqrstuvwxyz';
@@ -81,7 +80,7 @@ export const getTeacherCoursesAndBatches = async (req, res) => {
 export const studentsEnroll = async (req, res) => {
   try {
     const { course, batch } = req.body;
-    const csvFile = req.file.path; // Assuming the file is uploaded and available at req.file.path
+    const csvFile = req.file.path;
 
     if (!course || !batch || !csvFile) {
       return res.status(400).json({ message: 'Course, batch, and CSV file are required.' });
@@ -89,7 +88,6 @@ export const studentsEnroll = async (req, res) => {
 
     const students = [];
 
-    // Read the CSV file
     fs.createReadStream(csvFile)
     .pipe(csv({
       mapHeaders: ({ header }) => header.trim().toLowerCase(), // normalize
@@ -426,28 +424,44 @@ export const downloadPDF = async (req, res) => {
   }
 };
 
-//TODO: Bulk upload documents for evaluation
 export const bulkUploadDocuments = async (req, res) => {
   try {
-    const { examId } = req.body; // Get examId from the request body
-    const uploadedBy = req.user._id; // Assuming user authentication is implemented
+    const { examId } = req.body; 
+    const uploadedBy = req.user._id;
     const files = req.files;
 
-    const documents = await Promise.all(
-      files.map(async (file) => {
-        const uniqueId = await extractUserIdFromQR(file.path); // Extract uniqueId using OCR
-        return new Document({
+    let added = 0;
+    let updated = 0;
+
+    for (const file of files) {
+      const uniqueId = await extractUserIdFromQR(file.path);
+      const existingDoc = await Document.findOne({ uniqueId, examId });
+      if (existingDoc) {
+        if (existingDoc.documentPath && fs.existsSync(existingDoc.documentPath)) {
+          try {
+            fs.unlinkSync(existingDoc.documentPath);
+          } catch (err) {
+            console.warn('Failed to delete old document file:', err);
+          }
+        }
+        existingDoc.documentPath = file.path;
+        existingDoc.uploadedBy = uploadedBy;
+        existingDoc.uploadedOn = new Date();
+        await existingDoc.save();
+        updated++;
+      } else {
+        // Create a new document
+        await Document.create({
           uniqueId,
           examId,
           uploadedBy,
           documentPath: file.path,
         });
-      })
-    );
+        added++;
+      }
+    }
 
-    await Document.insertMany(documents);
-
-    res.status(200).json({ message: 'Documents uploaded successfully', documents });
+    res.status(200).json({ message: 'Documents processed successfully', added, updated });
   } catch (error) {
     console.error('Error during bulk upload:', error);
     res.status(500).json({ message: 'Failed to upload documents' });
@@ -461,8 +475,6 @@ export const sendEvaluation = async (req, res) => {
   if (!examId) {
     return res.status(400).json({ message: 'Exam ID is required' });
   }
-
-
 
   try {
     // Replace with actual evaluation logic

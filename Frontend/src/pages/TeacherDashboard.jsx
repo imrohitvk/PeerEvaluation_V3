@@ -198,7 +198,6 @@ export default function TeacherDashboard() {
     setSelectedExamForBulkUpload(null);
   };
 
-  // New handler for enrolling students
   const handleEnrollStudents = async ({ csvFile, course, batch }) => {
     const formData = new FormData();
     formData.append('file', csvFile);
@@ -233,7 +232,6 @@ export default function TeacherDashboard() {
     setEnrollOverlayOpen(false);
   };
 
-  // Handler for downloading the student list
   const downloadEnrolledStudents = async (courseId, batchId) => {
     try {
       const token = localStorage.getItem('token');
@@ -263,7 +261,6 @@ export default function TeacherDashboard() {
     }
   };
 
-  // Handler for submitting the exam schedule overlay
   const handleExamSubmit = async (formData) => {
     try {
       const token = localStorage.getItem('token');
@@ -320,7 +317,6 @@ export default function TeacherDashboard() {
   };
 
   const handleEditClick = (exam) => {
-    // console.log('Selected Exam for Edit:', exam);
     if (!isEditExamOverlayOpen) {
       setSelectedExam(exam);
       setEditExamOverlayOpen(true);
@@ -390,19 +386,18 @@ export default function TeacherDashboard() {
   };
 
   const handleDownloadPDF = async (examId) => {
-    console.log('Downloading PDF for exam:', examId);
     try {
-      const token = localStorage.getItem('token'); // Retrieve the token from localStorage or another storage mechanism
+      const token = localStorage.getItem('token'); 
 
       const response = await fetch(`http://localhost:5000/api/teacher/download-pdf/${examId}`, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${token}`, // Include the token in the Authorization header
+          Authorization: `Bearer ${token}`, 
         },
       });
 
       if (response.ok) {
-        const blob = await response.blob(); // Handle the response as a blob
+        const blob = await response.blob(); // 
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -411,7 +406,7 @@ export default function TeacherDashboard() {
         a.click();
         a.remove();
       } else {
-        const errorText = await response.text(); // Read the error message as text
+        const errorText = await response.text(); 
         console.error('Failed to download PDF:', errorText);
         showMessage(`Failed to download PDF: ${errorText}`, 'error');
       }
@@ -422,26 +417,32 @@ export default function TeacherDashboard() {
   };
 
   const handleBulkUpload = async (files) => {
+    const token = localStorage.getItem('token');
     const formData = new FormData();
     files.forEach((file) => formData.append('documents', file));
-    formData.append('examId', selectedExamForBulkUpload); // Include examId in the request
+    formData.append('examId', selectedExamForBulkUpload);
 
     try {
       const response = await fetch('http://localhost:5000/api/teacher/bulk-upload', {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       });
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Bulk upload successful:', result);
-        setBulkUploadOverlayOpen(false);
+        showMessage(`Bulk upload successful: ${result.message}. Successfully uploaded ${result.added} files and updated ${result.updated} files.`, 'success');
       } else {
-        console.error('Bulk upload failed');
+        const errorData = await response.json();
+        showMessage(`Bulk upload failed: ${errorData.message}`, 'error');
       }
     } catch (error) {
-      console.error('Error during bulk upload:', error);
+      showMessage(`An error occurred during bulk upload: ${error.message}`, 'error');
     }
+    setBulkUploadOverlayOpen(false);
+    setSelectedExamForBulkUpload(null);
   };
 
   const handleSendEvaluation = async (examId) => {
