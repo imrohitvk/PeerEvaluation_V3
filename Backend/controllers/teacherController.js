@@ -160,23 +160,31 @@ export const studentsEnroll = async (req, res) => {
 
           // Check if the student is already enrolled in the course and batch
           const existingEnrollment = await Enrollment.findOne({ student: user._id, course, batch });
-          if (existingEnrollment) {
+          if (existingEnrollment && existingEnrollment.status === 'active') {
             // Fetch batch and course details to get their names/ids
             const batchDoc = await Batch.findById(batch);
             const courseDoc = await Course.findById(course);
             const batchName = batchDoc ? batchDoc.batchId : batch;
             const courseName = courseDoc ? courseDoc.courseName : course;
-            return res.status(409).json({ message: `Student ${student.name} is already enrolled in the batch ${batchName} of course ${courseName}.` });
+            // console.error(`Student ${student.name} is already enrolled in the batch ${batchName} of course ${courseName}.`);
+            // return res.status(409).json({ message: `Student ${student.name} is already enrolled in the batch ${batchName} of course ${courseName}.` });
+            continue;
           }
+          else if (existingEnrollment && existingEnrollment.status === 'pending') {
+            existingEnrollment.status = 'active';
+            await existingEnrollment.save();
+            // return res.status(409).json({message: 'Students enrolled by accepting the pending enrollment request.'});
+            // console.log(`Student ${student.name} already has a pending enrollment request, now activated.`);
+          }
+          else{
+            const enrollment = new Enrollment({
+              student: user._id,
+              course,
+              batch,
+            });
 
-          // Enroll the student in the course and batch
-          const enrollment = new Enrollment({
-            student: user._id,
-            course,
-            batch,
-          });
-
-          await enrollment.save();
+            await enrollment.save();
+          }
         }
 
         fs.unlink(csvFile, (err) => {
@@ -201,7 +209,7 @@ export const getEnrolledStudents = async (req, res) => {
       return res.status(400).json({ message: 'Course ID and Batch ID are required.' });
     }
 
-    const enrollments = await Enrollment.find({ course: courseId, batch: batchId }).populate('student').populate('course').populate('batch');
+    const enrollments = await Enrollment.find({ course: courseId, batch: batchId, status: 'active' }).populate('student').populate('course').populate('batch');
 
     if (!enrollments || enrollments.length === 0) {
       return res.status(404).json({ message: 'No students found for the specified batch and course.' });

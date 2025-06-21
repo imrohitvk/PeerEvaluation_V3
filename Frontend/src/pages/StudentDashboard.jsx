@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfileMenu from '../components/User/ProfileMenu';
+import { FaBook, FaClipboardList, FaLaptopCode } from 'react-icons/fa';
+import { showMessage } from '../utils/Message';
 
 export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState('home');
   const [user, setUser] = useState({ name: '', email: '', role: '' });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState({ courses: 0, pendingEvaluations: 0, activeExams: 0 });
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [availableCourses, setAvailableCourses] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState('');
+  const [availableBatches, setAvailableBatches] = useState([]);
+  const [selectedBatch, setSelectedBatch] = useState('');
   const navigate = useNavigate();
+
 
   useEffect(() => {
     // Remove body background, handled by container now
@@ -40,6 +49,115 @@ export default function StudentDashboard() {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     navigate('/login');
+  };
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:5000/api/student/dashboard-stats', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+
+        if (
+          typeof data === 'object' &&
+          data !== null &&
+          'coursesEnrolled' in data &&
+          'pendingEvaluations' in data &&
+          'activeExams' in data
+        ) {
+          setDashboardStats({
+            courses: data.coursesEnrolled,
+            pendingEvaluations: data.pendingEvaluations,
+            activeExams: data.activeExams,
+          });
+        } else {
+          console.error('Invalid dashboard stats response:', data);
+          setDashboardStats({ courses: 0, pendingEvaluations: 0, activeExams: 0 });
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard stats:', error);
+        setDashboardStats({ courses: 0, pendingEvaluations: 0, activeExams: 0 });
+      }
+    };
+
+    fetchDashboardStats();
+  }, []);
+
+  // Fetch enrolled courses and available courses on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    // Fetch enrolled courses
+    fetch('http://localhost:5000/api/student/enrolled-courses', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => setEnrolledCourses(Array.isArray(data) ? data : []))
+      .catch(() => setEnrolledCourses([]));
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    // Fetch all available courses
+    fetch('http://localhost:5000/api/student/available-courses', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => setAvailableCourses(Array.isArray(data) ? data : []))
+      .catch(() => setAvailableCourses([]));
+  }, []);
+
+  // Fetch batches for selected course
+  useEffect(() => {
+    if (!selectedCourse) {
+      setAvailableBatches([]);
+      setSelectedBatch('');
+      return;
+    }
+    const token = localStorage.getItem('token');
+    fetch(`http://localhost:5000/api/student/course-batches/${selectedCourse}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => setAvailableBatches(Array.isArray(data) ? data : []))
+      .catch(() => setAvailableBatches([]));
+  }, [selectedCourse]);
+
+  // Handle enrollment request
+  const handleEnrollmentRequest = async (e) => {
+    e.preventDefault();
+    // console.log('Enrollment request:', selectedCourse, selectedBatch);
+    if (!selectedCourse || !selectedBatch) {
+      showMessage('Please select both course and batch.');
+      return;
+    }
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch('http://localhost:5000/api/student/request-enrollment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ courseId: selectedCourse, batchId: selectedBatch }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        showMessage(data.message, 'success');
+      } else {
+        showMessage(data.message || 'Failed to send enrollment request.', 'error');
+      }
+    } catch (error) {
+      showMessage('Failed to send enrollment request.', 'error');
+    }
+    setSelectedCourse('');
+    setSelectedBatch('');
   };
 
   const handleSidebarToggle = () => setSidebarOpen(open => !open);
@@ -117,8 +235,8 @@ export default function StudentDashboard() {
         {sidebarOpen && (
           <>
             <button onClick={() => setActiveTab('home')} style={buttonStyle(activeTab === 'home')}>🏠 Home</button>
-            <button onClick={() => setActiveTab('role')} style={buttonStyle(activeTab === 'role')}>🧑‍💼 Role Manager</button>
-            <button onClick={() => setActiveTab('course')} style={buttonStyle(activeTab === 'course')}>📚 Add Course</button>
+            <button onClick={() => setActiveTab('course')} style={buttonStyle(activeTab === 'course')}>📚 Courses & Enrollment</button>
+            <button onClick={() => setActiveTab('exam')} style={buttonStyle(activeTab === 'exam')}>📋 Exams and Evaluation</button>
             <button onClick={logout} style={{ marginTop: 'auto', ...buttonStyle(false) }}>🚪 Logout</button>
           </>
         )}
@@ -148,16 +266,39 @@ export default function StudentDashboard() {
           padding: '3rem 4rem',
         }}>
           {activeTab === 'home' && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#3f3d56' }}>
-              <h2>Welcome to the Student Dashboard</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', color: '#3f3d56' }}>
+              <h2 style={{ ...sectionHeading, textAlign: 'center', marginBottom: '2rem' }}>
+                Welcome to the Student Dashboard
+              </h2>
+              <div style={{ display: 'flex', justifyContent: 'space-around', width: '100%' }}>
+                {/* Courses Enrolled Card */}
+                <div style={{ textAlign: 'center', padding: '1rem', borderRadius: '12px', background: 'linear-gradient(135deg, #667eea, #764ba2)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '200px', color: '#fff' }}>
+                  <FaBook size={40} style={{ marginBottom: '0.5rem' }} />
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Courses Enrolled</h3>
+                  <p style={{ fontWeight: 'bold', fontSize: '1.2rem' }}> {dashboardStats.courses} </p>
+                </div>
+                {/* Pending Evaluations Card */}
+                <div style={{ textAlign: 'center', padding: '1rem', borderRadius: '12px', background: 'linear-gradient(135deg, #32cd32, #125e12)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '230px', color: '#fff' }}>
+                  <FaClipboardList size={40} style={{ marginBottom: '0.5rem' }} />
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Pending Evaluations</h3>
+                  <p style={{ fontWeight: 'bold', fontSize: '1.2rem' }}> {dashboardStats.pendingEvaluations} </p>
+                </div>
+                {/* Active Exams Card */}
+                <div style={{ textAlign: 'center', padding: '1rem', borderRadius: '12px', background: 'linear-gradient(135deg, #43cea2, #185a9d)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '200px', color: '#fff' }}>
+                  <FaLaptopCode size={40} style={{ marginBottom: '0.5rem' }} />
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Active Exams</h3>
+                  <p style={{ fontWeight: 'bold', fontSize: '1.2rem' }}> {dashboardStats.activeExams} </p>
+                </div>
+              </div>
             </div>
           )}
+
           {activeTab === 'profile' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559', height: '100%' }}>
-              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Profile</h2>
-              <p style={{ fontSize: '1.2rem', margin: '0.5rem 0', color: '#3f3d56' }}><strong>Name:</strong> {user.name}</p>
-              <p style={{ fontSize: '1.2rem', margin: '0.5rem 0', color: '#3f3d56' }}><strong>Email:</strong> {user.email}</p>
-              <p style={{ fontSize: '1.2rem', margin: '0.5rem 0', color: '#3f3d56' }}>
+              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left' }}>Profile</h2>
+              <p style={{ fontSize: '1.2rem', margin: '0.5rem 0' }}><strong>Name:</strong> {user.name}</p>
+              <p style={{ fontSize: '1.2rem', margin: '0.5rem 0' }}><strong>Email:</strong> {user.email}</p>
+              <p style={{ fontSize: '1.2rem', margin: '0.5rem 0' }}>
                 <strong>Role:</strong> {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
               </p>
               <div style={{ marginTop: 'auto' }}>
@@ -183,17 +324,162 @@ export default function StudentDashboard() {
             </div>
           )}
 
-          {activeTab === 'role' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
-              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Role Manager</h2>
-              <p style={{ color: '#3f3d56' }}>Implement role update functionality here.</p>
+          {activeTab === 'course' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#2d3559', width: '100%' }}>
+              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: ' #4b3c70', width: '100%' }}>
+                Courses & Enrollment
+              </h2>
+
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                justifyContent: 'center',
+                width: '100%'
+              }}>
+                {/* Enrolled Courses Section */}
+                <div style={{
+                  flex: 1,
+                  minWidth: 190,
+                  maxWidth: 500,
+                  borderRadius: '18px',
+                  boxShadow: '0 4px 16px rgba(60,60,120,0.10)',
+                  padding: '2rem 2.5rem',
+                  border: '1.5px solid #4b3c70',
+                }}>
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', marginBottom: '1.2rem', letterSpacing: '0.5px' }}>
+                    Enrolled Courses
+                  </h3>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {enrolledCourses.length === 0 ? (
+                      <li style={{ fontStyle: 'italic' }}>No enrolled courses found.</li>
+                    ) : (
+                      enrolledCourses.map((item, idx) => (
+                        <li key={idx} style={{
+                          marginBottom: '0.75rem',
+                          padding: '0.85rem 1.2rem',
+                          background: '#fff',
+                          borderRadius: '8px',
+                          boxShadow: '0 2px 8px #4b3c70',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          color: ' #2d3559'
+                        }}>
+                          <span style={{ fontWeight: 600 }}>{item.courseName}</span>
+                          <span style={{
+                            color: '#fff',
+                            background: ' #4b3c70',
+                            borderRadius: '6px',
+                            padding: '0.3rem 1rem',
+                            fontWeight: 500,
+                            fontSize: '0.98rem'
+                          }}>
+                            Batch: {item.batchName}
+                          </span>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+
+                {/* Enrollment Request Section */}
+                <div style={{
+                  flex: 1.3,
+                  minWidth: 200,
+                  maxWidth: 600,
+                  borderRadius: '18px',
+                  boxShadow: '0 4px 16px rgba(60,60,120,0.10)',
+                  padding: '2rem 2.5rem',
+                  border: '1.5px solid #4b3c70',
+                }}>
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', marginBottom: '1.2rem', letterSpacing: '0.5px' }}>
+                    New Enrollment
+                  </h3>
+                  <form style={{ display: 'flex', flexDirection: 'row', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }} onSubmit={handleEnrollmentRequest}>
+                    <div style={{ position: 'relative' }}>
+                      <select
+                        value={selectedCourse}
+                        onChange={e => setSelectedCourse(e.target.value)}
+                        style={{
+                          padding: '0.6rem 1.2rem',
+                          borderRadius: '8px',
+                          border: '1.5px solid #4b3c70',
+                          fontSize: '1rem',
+                          background: '#fff',
+                          color: '#000',
+                          fontWeight: 500,
+                          minWidth: '160px',
+                          transition: 'background 0.2s',
+                          outline: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <option value="">Select Course</option>
+                        {availableCourses.map(course => (
+                          <option key={course._id} value={course._id}>
+                            {course.courseName} ({course.courseId})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ position: 'relative' }}>
+                      <select
+                        value={selectedBatch}
+                        onChange={e => setSelectedBatch(e.target.value)}
+                        style={{
+                          padding: '0.6rem 1.2rem',
+                          borderRadius: '8px',
+                          border: '1.5px solid #4b3c70',
+                          fontSize: '1rem',
+                          background: selectedBatch ? ' #ffffff' : ' #f5f6fa',
+                          color: selectedBatch ? ' #000000' : ' #000000',
+                          fontWeight: 500,
+                          minWidth: '160px',
+                          transition: 'background 0.2s',
+                          outline: 'none',
+                          cursor: selectedCourse ? 'pointer' : 'not-allowed',
+                          opacity: selectedCourse ? 1 : 0.6,
+                        }}
+                        disabled={!selectedCourse}
+                      >
+                        <option value="">Select Batch</option>
+                        {availableBatches.map(batch => (
+                          <option key={batch._id} value={batch._id}>{batch.batchId}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <button
+                      type="submit"
+                      style={{
+                        background: selectedCourse && selectedBatch ? ' #4b3c70' : ' #a0a0a0',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '0.7rem 1.7rem',
+                        fontWeight: 600,
+                        fontSize: '1rem',
+                        cursor: selectedCourse && selectedBatch ? 'pointer' : 'not-allowed',
+                        boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
+                      }}
+                      disabled={!(selectedCourse && selectedBatch)}
+                    >
+                      Enroll
+                    </button>
+                  </form>
+
+                </div>
+              </div>
             </div>
           )}
-          {activeTab === 'course' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
-              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Add New Course</h2>
-              <p style={{ color: '#3f3d56' }}>Implement course creation form here.</p>
-            </div>
+          
+          {activeTab === 'exam' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
+            <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Exams & Evaluation</h2>
+            <p style={{ color: '#3f3d56' }}>Implement exams listing and evaluation details here.</p>
+          </div>
           )}
         </div>
       </main>

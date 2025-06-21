@@ -6,6 +6,7 @@ import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import teachRoutes from "./routes/teachRoutes.js";
+import studentRoutes from "./routes/studentRoutes.js";
 import { fileURLToPath } from 'url';
 
 dotenv.config();
@@ -34,6 +35,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/teacher", teachRoutes);
+app.use("/api/student", studentRoutes);
 
 // Connect to DB and start server
 const startServer = async () => {
