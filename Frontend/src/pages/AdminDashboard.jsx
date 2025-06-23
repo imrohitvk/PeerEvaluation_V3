@@ -369,7 +369,11 @@ useEffect(() => {
         right: 0,
         bottom: 0,
         boxSizing: 'border-box',
-        overflow: 'hidden',
+        minWidth: '500px',
+        overflowX: 'auto',
+        overflowY: 'auto',
+        scrollbarWidth: 'thin',
+        scrollbarColor: ' #4b3c70 transparent',
       }}
     >
       {/* Profile Icon Dropdown Top Right */}
@@ -457,6 +461,10 @@ useEffect(() => {
           margin: 'auto',
           display: 'block',
           padding: '3rem 4rem',
+          minWidth: '950px',
+          overflowX: 'auto',
+          scrollbarWidth: 'thin',
+          scrollbarColor: ' #4b3c70 transparent',
         }}>
 
           {activeTab === 'home' && (

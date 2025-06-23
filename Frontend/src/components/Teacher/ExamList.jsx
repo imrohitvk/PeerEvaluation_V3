@@ -5,8 +5,8 @@ const ExamList = ({ exams, handleEditClick, handleDownloadPDF, handleBulkUploadC
   return (
     <div style={{ marginTop: '2rem', maxHeight: '350px', border: '1px solid #ddd', borderRadius: '12px' }}>
       <h3 style={{ color: '#3f3d56', fontWeight: 'bold', marginBottom: '1rem' }}>Exams</h3>
-      <div style={{ maxHeight: '300px', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-        <table style={{ width: '100%', overflowX: 'auto', overflowY: 'auto', borderCollapse: 'collapse', borderRadius: '12px' }}>
+      <div style={{ maxHeight: '300px', maxWidth: '1300px', overflowY: 'auto', overflowX: 'auto', scrollbarWidth: 'thin', scrollbarColor: ' #4b3c70 transparent' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', borderRadius: '12px' }}>
           <thead style={{ backgroundColor: '#4b3c70', color: '#ffffff', position: 'sticky', top: 0, zIndex: 1 }}>
             <tr>
               <th style={{ padding: '12px', textAlign: 'center' }}>Exam Name</th>

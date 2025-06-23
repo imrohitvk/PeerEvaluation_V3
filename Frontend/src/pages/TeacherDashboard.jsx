@@ -595,7 +595,11 @@ export default function TeacherDashboard() {
         right: 0,
         bottom: 0,
         boxSizing: 'border-box',
-        overflow: 'hidden',
+        minWidth: '500px',
+        overflowX: 'auto',
+        overflowY: 'auto',
+        scrollbarWidth: 'thin',
+        scrollbarColor: ' #4b3c70 transparent',
       }}
     >
       {/* Profile Icon Dropdown Top Right */}
@@ -683,6 +687,7 @@ export default function TeacherDashboard() {
           margin: 'auto',
           display: 'block',
           padding: '3rem 4rem',
+          minWidth: '940px',
         }}>
           {activeTab === 'home' && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#3f3d56' }}>

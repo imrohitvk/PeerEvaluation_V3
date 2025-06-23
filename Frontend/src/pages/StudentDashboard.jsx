@@ -177,7 +177,11 @@ export default function StudentDashboard() {
         right: 0,
         bottom: 0,
         boxSizing: 'border-box',
-        overflow: 'hidden',
+        minWidth: '500px',
+        overflowX: 'auto',
+        overflowY: 'auto',
+        scrollbarWidth: 'thin',
+        scrollbarColor: ' #4b3c70 transparent',
       }}
     >
       {/* Profile Icon Dropdown Top Right */}
@@ -264,6 +268,10 @@ export default function StudentDashboard() {
           margin: 'auto',
           display: 'block',
           padding: '3rem 4rem',
+          minWidth: '950px',
+          overflowX: 'auto',
+          scrollbarWidth: 'thin',
+          scrollbarColor: ' #4b3c70 transparent',
         }}>
           {activeTab === 'home' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', color: '#3f3d56' }}>
@@ -350,37 +358,44 @@ export default function StudentDashboard() {
                   <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', marginBottom: '1.2rem', letterSpacing: '0.5px' }}>
                     Enrolled Courses
                   </h3>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                    {enrolledCourses.length === 0 ? (
-                      <li style={{ fontStyle: 'italic' }}>No enrolled courses found.</li>
-                    ) : (
-                      enrolledCourses.map((item, idx) => (
-                        <li key={idx} style={{
-                          marginBottom: '0.75rem',
-                          padding: '0.85rem 1.2rem',
-                          background: '#fff',
-                          borderRadius: '8px',
-                          boxShadow: '0 2px 8px #4b3c70',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          color: ' #2d3559'
-                        }}>
-                          <span style={{ fontWeight: 600 }}>{item.courseName}</span>
-                          <span style={{
-                            color: '#fff',
-                            background: ' #4b3c70',
-                            borderRadius: '6px',
-                            padding: '0.3rem 1rem',
-                            fontWeight: 500,
-                            fontSize: '0.98rem'
+                  <div style={{
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: ' #4b3c70 transparent',
+                  }}>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 5 }}>
+                      {enrolledCourses.length === 0 ? (
+                        <li style={{ fontStyle: 'italic' }}>No enrolled courses found.</li>
+                      ) : (
+                        enrolledCourses.map((item, idx) => (
+                          <li key={idx} style={{
+                            marginBottom: '0.75rem',
+                            padding: '0.85rem 1.2rem',
+                            background: '#fff',
+                            borderRadius: '8px',
+                            boxShadow: '0 2px 8px #4b3c70',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            color: ' #2d3559'
                           }}>
-                            Batch: {item.batchName}
-                          </span>
-                        </li>
-                      ))
-                    )}
-                  </ul>
+                            <span style={{ fontWeight: 600 }}>{item.courseName}</span>
+                            <span style={{
+                              color: '#fff',
+                              background: ' #4b3c70',
+                              borderRadius: '6px',
+                              padding: '0.3rem 1rem',
+                              fontWeight: 500,
+                              fontSize: '0.98rem'
+                            }}>
+                              Batch: {item.batchName}
+                            </span>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
                 </div>
 
                 {/* Enrollment Request Section */}
