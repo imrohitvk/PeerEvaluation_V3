@@ -216,7 +216,7 @@ export default function TeacherDashboard() {
 
       if (response.ok) {
         const data = await response.json();
-        showMessage(`Success: ${data.message}`, 'success');
+        showMessage(`Success: ${data.message} with ${data.statistics.enrolled} already enrolled, ${data.statistics.new_enrollment} new enrollments and ${data.statistics.pending_enrollment} pending requests accepted.`, 'success');
       } else if (response.status === 409) {
         const errorData = await response.json();
         showMessage(`Info: ${errorData.message}`, 'info'); // Display informational message

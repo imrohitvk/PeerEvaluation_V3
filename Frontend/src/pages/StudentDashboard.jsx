@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfileMenu from '../components/User/ProfileMenu';
 import { FaBook, FaClipboardList, FaLaptopCode } from 'react-icons/fa';
@@ -14,6 +14,11 @@ export default function StudentDashboard() {
   const [selectedCourse, setSelectedCourse] = useState('');
   const [availableBatches, setAvailableBatches] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState('');
+  const [studentBatches, setStudentBatches] = useState([]);
+  const [selectedBatchForExam, setSelectedBatchForExam] = useState('');
+  const [batchExams, setBatchExams] = useState([]);
+  const [examFileMap, setExamFileMap] = useState({});
+  const fileInputRefs = useRef({});
   const navigate = useNavigate();
 
 
@@ -129,6 +134,32 @@ export default function StudentDashboard() {
       .catch(() => setAvailableBatches([]));
   }, [selectedCourse]);
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    // Fetch all batches student is enrolled in
+    fetch('http://localhost:5000/api/student/enrolled-batches', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => setStudentBatches(Array.isArray(data) ? data : []))
+      .catch(() => setStudentBatches([]));
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    // Fetch all exams for the student (optionally filter by batch)
+    let url = 'http://localhost:5000/api/student/all-exams';
+    if (selectedBatchForExam) url += `?batchId=${selectedBatchForExam}`;
+    fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => setBatchExams(Array.isArray(data) ? data : []))
+      .catch(() => setBatchExams([]));
+  }, [selectedBatchForExam]);
+
   // Handle enrollment request
   const handleEnrollmentRequest = async (e) => {
     e.preventDefault();
@@ -160,7 +191,43 @@ export default function StudentDashboard() {
     setSelectedBatch('');
   };
 
-  const handleSidebarToggle = () => setSidebarOpen(open => !open);
+  const handleExamFileChange = (examId, file) => {
+    setExamFileMap(prev => ({ ...prev, [examId]: file }));
+  };
+
+  const handleExamFileUpload = async (examId) => {
+    const file = examFileMap[examId];
+    if (!file) return;
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('examId', examId);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/student/upload-exam-document', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await response.json();
+      if (response.ok) {
+        showMessage(data.message, 'success');
+      }
+      else if (response.status === 409) {
+        showMessage(data.message, 'info');
+      } else {
+        showMessage(data.message || 'Upload failed!', 'error');
+      }
+    } catch {
+      showMessage('Upload failed!', 'error');
+    }
+    setExamFileMap(prev => ({ ...prev, [examId]: null }));
+    if (fileInputRefs.current[examId]) {
+      fileInputRefs.current[examId].value = "";
+    }
+  };
+
+    const handleSidebarToggle = () => setSidebarOpen(open => !open);
 
   return (
     <div
@@ -240,7 +307,8 @@ export default function StudentDashboard() {
           <>
             <button onClick={() => setActiveTab('home')} style={buttonStyle(activeTab === 'home')}>🏠 Home</button>
             <button onClick={() => setActiveTab('course')} style={buttonStyle(activeTab === 'course')}>📚 Courses & Enrollment</button>
-            <button onClick={() => setActiveTab('exam')} style={buttonStyle(activeTab === 'exam')}>📋 Exams and Evaluation</button>
+            <button onClick={() => setActiveTab('exam')} style={buttonStyle(activeTab === 'exam')}>📋 Exams</button>
+            <button onClick={() => setActiveTab('evaluation')} style={buttonStyle(activeTab === 'evaluation')}>📝 Evaluations</button>
             <button onClick={logout} style={{ marginTop: 'auto', ...buttonStyle(false) }}>🚪 Logout</button>
           </>
         )}
@@ -491,9 +559,81 @@ export default function StudentDashboard() {
           )}
           
           {activeTab === 'exam' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559', width: '100%' }}>
+              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Exams</h2>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ fontSize: '1rem', fontWeight: 500 }}>Filter by Batch: </label>
+                <select
+                  value={selectedBatchForExam}
+                  onChange={e => setSelectedBatchForExam(e.target.value)}
+                  style={{ minWidth: 180, padding: '0.6rem 1.2rem', borderRadius: '8px', border: '1.5px solid #4b3c70', fontSize: '1rem', background: '#fff', color: '#000', fontWeight: 500, transition: 'background 0.2s', outline: 'none', cursor: 'pointer' }}
+                >
+                  <option value="">All Batches</option>
+                  {studentBatches.map(batch => (
+                    <option key={batch._id} value={batch._id}>
+                      {batch.courseName} - {batch.batchId}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {/* style={{ maxHeight: '300px', maxWidth: '1300px', overflowY: 'auto', overflowX: 'auto', scrollbarWidth: 'thin', scrollbarColor: ' #4b3c70 transparent' }} */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #4b3c70' }}>
+                <thead style={{ backgroundColor: '#4b3c70', color: '#ffffff', position: 'sticky', top: 0, zIndex: 1 }}>
+                  <tr>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Exam Name</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Date</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Time</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Upload File</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {batchExams.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', padding: '1rem' }}>No exams found.</td>
+                    </tr>
+                  ) : (
+                    batchExams.map(exam => (
+                      <tr key={exam._id}>
+                        <td style={{ padding: '12px', fontWeight: 500 }}>{exam.name}</td>
+                        <td style={{ padding: '12px', fontWeight: 500 }}>{new Date(exam.date).toLocaleDateString()}</td>
+                        <td style={{ padding: '12px', fontWeight: 500 }}>{exam.time}</td>
+                        <td style={{ padding: '12px', fontWeight: 500 }}>
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx"
+                            ref={el => (fileInputRefs.current[exam._id] = el)}
+                            onChange={e => handleExamFileChange(exam._id, e.target.files[0])}
+                            style={{ marginBottom: 4 }}
+                          />
+                          <button
+                            onClick={() => handleExamFileUpload(exam._id)}
+                            disabled={!examFileMap[exam._id]}
+                            style={{
+                              background: examFileMap[exam._id] ? '#4b3c70' : '#a0a0a0',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '0.4rem 1.2rem',
+                              fontWeight: 500,
+                              cursor: examFileMap[exam._id] ? 'pointer' : 'not-allowed',
+                            }}
+                          >
+                            Upload
+                          </button>
+                          {/* Removed uploadMsgMap display */}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {activeTab === 'evaluation' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
-            <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Exams & Evaluation</h2>
-            <p style={{ color: '#3f3d56' }}>Implement exams listing and evaluation details here.</p>
+            <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Evaluation</h2>
+            <p style={{ color: '#3f3d56' }}>Implement evaluation details.</p>
           </div>
           )}
         </div>

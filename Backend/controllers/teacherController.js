@@ -78,6 +78,7 @@ export const getTeacherCoursesAndBatches = async (req, res) => {
 };
 
 export const studentsEnroll = async (req, res) => {
+  let enrolled = 0, pending_enrollment = 0, new_enrollment = 0;
   try {
     const { course, batch } = req.body;
     const csvFile = req.file.path;
@@ -105,7 +106,7 @@ export const studentsEnroll = async (req, res) => {
     .on('end', async () => {
         for (const student of students) {
           if (!student.name || !student.email) {
-            return res.status(400).json({ message: `Missing name or email for one of the students.` });
+            return res.status(400).json({ message: `Missing name or email for one of the student.` });
           }
 
           const emailIsValid = await new Promise((resolve) => {
@@ -116,7 +117,7 @@ export const studentsEnroll = async (req, res) => {
           });
       
           if (!emailIsValid) {
-            return res.status(400).json({ message: 'Email address does not exist or is invalid.' });
+            return res.status(400).json({ message: 'Email address does not exist or is invalid for one of the student.' });
           }
 
           let user = await User.findOne({ email: student.email });
@@ -166,6 +167,7 @@ export const studentsEnroll = async (req, res) => {
             const courseDoc = await Course.findById(course);
             const batchName = batchDoc ? batchDoc.batchId : batch;
             const courseName = courseDoc ? courseDoc.courseName : course;
+            enrolled++;
             // console.error(`Student ${student.name} is already enrolled in the batch ${batchName} of course ${courseName}.`);
             // return res.status(409).json({ message: `Student ${student.name} is already enrolled in the batch ${batchName} of course ${courseName}.` });
             continue;
@@ -173,6 +175,7 @@ export const studentsEnroll = async (req, res) => {
           else if (existingEnrollment && existingEnrollment.status === 'pending') {
             existingEnrollment.status = 'active';
             await existingEnrollment.save();
+            pending_enrollment++;
             // return res.status(409).json({message: 'Students enrolled by accepting the pending enrollment request.'});
             // console.log(`Student ${student.name} already has a pending enrollment request, now activated.`);
           }
@@ -184,6 +187,7 @@ export const studentsEnroll = async (req, res) => {
             });
 
             await enrollment.save();
+            new_enrollment++;
           }
         }
 
@@ -193,7 +197,7 @@ export const studentsEnroll = async (req, res) => {
           }
         });
 
-        res.status(200).json({ message: 'Students enrolled successfully.' });
+        res.status(200).json({ message: 'Students enrolled successfully', statistics: { enrolled, pending_enrollment, new_enrollment } });
       });
   } catch (error) {
     console.error(error);
@@ -443,6 +447,12 @@ export const bulkUploadDocuments = async (req, res) => {
 
     for (const file of files) {
       const uniqueId = await extractUserIdFromQR(file.path);
+      if (!uniqueId) continue;
+      const isUIDValid = await UIDMap.exists({ uniqueId, examId });
+      if (!isUIDValid) {
+        // console.warn(`Unique ID ${uniqueId} not found for exam ${examId}. Skipping file: ${file.originalname}`);
+        continue;
+      }
       const existingDoc = await Document.findOne({ uniqueId, examId });
       if (existingDoc) {
         if (existingDoc.documentPath && fs.existsSync(existingDoc.documentPath)) {
@@ -471,7 +481,7 @@ export const bulkUploadDocuments = async (req, res) => {
 
     res.status(200).json({ message: 'Documents processed successfully', added, updated });
   } catch (error) {
-    console.error('Error during bulk upload:', error);
+    // console.error('Error during bulk upload:', error);
     res.status(500).json({ message: 'Failed to upload documents' });
   }
 };
