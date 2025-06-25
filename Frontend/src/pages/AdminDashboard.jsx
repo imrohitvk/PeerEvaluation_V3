@@ -565,7 +565,6 @@ useEffect(() => {
                     <option value="admin">Admin</option>
                     <option value="teacher">Teacher</option>
                     <option value="student">Student</option>
-                    <option value="ta">TA</option>
                   </select>
                 </div>
 

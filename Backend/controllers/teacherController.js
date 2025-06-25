@@ -5,6 +5,7 @@ import { Enrollment } from '../models/Enrollment.js';
 import { Examination } from '../models/Examination.js';
 import { Document } from '../models/Document.js';
 import { UIDMap } from '../models/UIDMap.js';
+import { TA } from '../models/TA.js';
 import csv from 'csv-parser';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
@@ -16,6 +17,87 @@ import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
 import mongoose from 'mongoose';
 
+
+export const assignTA = async (req, res) => {
+  try {
+    const { email, batchId } = req.body;
+
+    if (!email || !batchId) {
+      return res.status(400).json({ message: 'Email and batchId are required.' });
+    }
+
+    const user = await User.findOne({ email, role: 'student' });
+    if (!user) {
+      return res.status(404).json({ message: 'Student with this email not found.' });
+    }
+
+    const batch = await Batch.findById(batchId);
+    if (!batch) {
+      return res.status(404).json({ message: 'Batch not found.' });
+    }
+
+    const isEnrolled = await Enrollment.exists({ student: user._id, batch: batch._id });
+    if (isEnrolled) {
+      return res.status(400).json({ message: 'Student is enrolled in this batch and cannot be assigned as TA.' });
+    }
+
+    const isAlreadyTA = await TA.exists({ userId: user._id, batch: batch._id });
+    if (isAlreadyTA) {
+      return res.status(409).json({ message: 'This user is already assigned as TA for the selected batch.' });
+    }
+
+    user.isTA = true;
+    await user.save();
+
+    await TA.create({
+      userId: user._id,
+      batch: batch._id
+    });
+
+    return res.status(200).json({ message: 'TA assigned to batch successfully.' });
+  } catch (err) {
+    console.error('Error assigning TA:', err);
+    return res.status(500).json({ message: 'Failed to assign TA.', error: err.message });
+  }
+};
+
+export const deassignTA = async (req, res) => {
+  try {
+    const { email, batchId } = req.body;
+
+    if (!email || !batchId) {
+      return res.status(400).json({ message: 'Email and batchId are required.' });
+    }
+
+    const user = await User.findOne({ email, role: 'student', isTA: true });
+    if (!user) {
+      return res.status(404).json({ message: 'TA not found with this email.' });
+    }
+
+    const batch = await Batch.findById(batchId);
+    if (!batch) {
+      return res.status(404).json({ message: 'Batch not found.' });
+    }
+
+    const taAssignment = await TA.findOne({ userId: user._id, batch: batch._id });
+    if (!taAssignment) {
+      return res.status(409).json({ message: 'TA is not assigned to this batch.' });
+    }
+
+    await TA.deleteOne({ _id: taAssignment._id });
+
+    const stillTA = await TA.exists({ userId: user._id });
+    if (!stillTA) {
+      user.isTA = false;
+      await user.save();
+    }
+
+    return res.status(200).json({ message: 'TA deassigned from batch successfully.' });
+  } catch (err) {
+    console.error('Error deassigning TA:', err);
+    return res.status(500).json({ message: 'Failed to deassign TA.', error: err.message });
+  }
+};
 
 function generateStrongPassword() {
   const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -423,6 +505,7 @@ export const downloadPDF = async (req, res) => {
       doc.text(`User Name: ${enrollment.student.name}`, { align: 'center' });
       doc.addPage();
       doc.image(qrCodeData, { fit: [100, 100], align: 'center' });
+      doc.addPage();
       
     }
 

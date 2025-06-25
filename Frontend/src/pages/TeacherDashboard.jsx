@@ -140,44 +140,40 @@ export default function TeacherDashboard() {
 
   const handleSidebarToggle = () => setSidebarOpen(open => !open);
   
-  // Added functionality to handle the role update request.
-  const handleRoleUpdate = async (event) => {
-    event.preventDefault();
+  // Added functionality to handle the TA update request.
+  const handleTAAssignment = async (e) => {
+    e.preventDefault();
+    const email = e.target.email.value;
+    const batchId = e.target.batch.value;
+    const action = e.target.action.value;
 
-    const email = document.getElementById('email').value;
-    const role = document.getElementById('role').value;
-
-    if (!email || !role) {
-      showMessage('Please provide both email and role.', 'error');
+    if (!email || !batchId || !action) {
+      showMessage('Please fill all fields.', 'error');
       return;
     }
 
+    const token = localStorage.getItem('token');
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/admin/update-role', {
+      const response = await fetch(`http://localhost:5000/api/teacher/${action}-ta`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ email, role }),
+        body: JSON.stringify({ email, batchId }),
       });
 
       const data = await response.json();
-
       if (response.ok) {
-        showMessage('Role updated successfully!', 'success');
-        // Optionally, you can reset the form fields after successful update
-        document.getElementById('email').value = '';
-        document.getElementById('role').value = '';
-        // setTimeout(() => setRefreshApp(true), 1000); // Adds a 1-second delay before refreshing the app
+        showMessage(data.message, 'success');
       } else {
-        showMessage(`Error! ${data.message || 'Failed to update role.'}`, 'error');
+        showMessage(data.message || 'Failed to perform action.', 'error');
       }
     } catch (error) {
-      showMessage('An error occurred while updating the role.', 'error');
+      showMessage('An error occurred.', 'error');
       console.error(error);
     }
+    e.target.reset();
   };
 
   const handleScheduleExam = () => {
@@ -657,7 +653,7 @@ export default function TeacherDashboard() {
         {sidebarOpen && (
           <>
             <button onClick={() => setActiveTab('home')} style={buttonStyle(activeTab === 'home')}>🏠 Home</button>
-            <button onClick={() => setActiveTab('role')} style={buttonStyle(activeTab === 'role')}>🧑‍💼 Role Manager</button>
+            <button onClick={() => setActiveTab('role')} style={buttonStyle(activeTab === 'role')}>🧑‍💼 TA Manager</button>
             <button onClick={() => setActiveTab('course')} style={buttonStyle(activeTab === 'course')}>📚 Courses</button>
             <button onClick={() => setActiveTab('exam')} style={buttonStyle(activeTab === 'exam')}>📝 Exams</button>
             <button onClick={logout} style={{ marginTop: 'auto', ...buttonStyle(false) }}>🚪 Logout</button>
@@ -728,16 +724,17 @@ export default function TeacherDashboard() {
 
           {activeTab === 'role' && (
             <div style={{ display: 'flex', flexDirection: 'column', color: '#2d3559' }}>
-              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Role Manager</h2>
-              <p style={{textAlign: 'left', color: '#3f3d56' }}>Update the role of a user by providing their email ID and selecting a role.</p>
-              <form onSubmit={handleRoleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>TA Manager</h2>
+              <p style={{ textAlign: 'left', color: '#3f3d56' }}>Assign or deassign a TA to/from a batch by selecting the batch and action.</p>
+              <form onSubmit={handleTAAssignment} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+                {/* Email Input */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
                   <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }} htmlFor="email">Email ID</label>
                   <input
                     type="email"
                     id="email"
                     name="email"
-                    placeholder="Enter user email ID"
+                    placeholder="Enter TA email ID"
                     style={{
                       padding: '0.5rem',
                       borderRadius: '12px',
@@ -751,11 +748,12 @@ export default function TeacherDashboard() {
                   />
                 </div>
 
+                {/* Batch Dropdown */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }} htmlFor="role">Select Role</label>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }} htmlFor="batch">Select Batch</label>
                   <select
-                    id="role"
-                    name="role"
+                    id="batch"
+                    name="batch"
                     style={{
                       padding: '0.5rem',
                       borderRadius: '12px',
@@ -767,13 +765,40 @@ export default function TeacherDashboard() {
                       color: ' #4b3c70',
                     }}
                   >
-                    {/* <option value="admin">Admin</option> */}
-                    {/* <option value="teacher">Teacher</option> */}
-                    <option value="student">Student</option>
-                    <option value="ta">TA</option>
+                    <option value="">Select Batch</option>
+                    {coursesAndBatches.flatMap(course =>
+                      course.batches.map(batch => (
+                        <option key={batch.id} value={batch.id}>
+                          {course.name} ({batch.name})
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
+                {/* Action Dropdown */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                  <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }} htmlFor="action">Select Action</label>
+                  <select
+                    id="action"
+                    name="action"
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '12px',
+                      border: '1px solid #5c5470',
+                      fontSize: '1rem',
+                      width: '300px',
+                      boxSizing: 'border-box',
+                      background: '#ffffff',
+                      color: ' #4b3c70',
+                    }}
+                  >
+                    <option value="assign">Assign</option>
+                    <option value="deassign">Deassign</option>
+                  </select>
+                </div>
+
+                {/* Submit Button */}
                 <div style={{ display: 'flex', width: '100%', marginLeft: '150px' }}>
                   <button
                     type="submit"
@@ -790,7 +815,7 @@ export default function TeacherDashboard() {
                       transition: 'background 0.2s',
                     }}
                   >
-                    Update Role
+                    Submit
                   </button>
                 </div>
               </form>

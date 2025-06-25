@@ -6,7 +6,6 @@ import { BrowserRouter as Router, Routes, Route} from 'react-router-dom'
 import AdminDashboard from './pages/AdminDashboard'
 import TeacherDashboard from './pages/TeacherDashboard'
 import StudentDashboard from './pages/StudentDashboard'
-import TADashboard from './pages/TADashboard'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Homepage from './pages/Homepage'
@@ -35,7 +34,6 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/teacher" element={<TeacherDashboard />} />
-        <Route path="/ta" element={<TADashboard />} />
         <Route path="/student" element={<StudentDashboard />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />

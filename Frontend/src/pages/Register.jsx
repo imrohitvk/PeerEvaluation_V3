@@ -286,8 +286,8 @@ export default function Register() {
                         >
                             <option value="student" style={{ color: '#222' }}>Student</option>
                             <option value="teacher" style={{ color: '#222' }}>Teacher</option>
-                            <option value="ta" style={{ color: '#222' }}>TA</option>
-                            <option value="admin" style={{ color: '#222' }}>Admin</option>
+                            {/* <option value="ta" style={{ color: '#222' }}>TA</option>
+                            <option value="admin" style={{ color: '#222' }}>Admin</option> */}
                         </select>
                     </div>
                     <button
