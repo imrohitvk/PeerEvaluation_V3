@@ -166,6 +166,7 @@ export default function TeacherDashboard() {
       const data = await response.json();
       if (response.ok) {
         showMessage(data.message, 'success');
+        e.target.reset();
       } else {
         showMessage(data.message || 'Failed to perform action.', 'error');
       }
@@ -173,7 +174,6 @@ export default function TeacherDashboard() {
       showMessage('An error occurred.', 'error');
       console.error(error);
     }
-    e.target.reset();
   };
 
   const handleScheduleExam = () => {
@@ -294,6 +294,7 @@ export default function TeacherDashboard() {
     }
 
     setExamOverlayOpen(false);
+    setSelectedCourseId('');
     // After scheduling, fetch the updated list of exams so the new one appears
     try {
       const token = localStorage.getItem('token');

@@ -442,6 +442,21 @@ export const deleteExam = async (req, res) => {
       });
     }
 
+    // Delete associated uploaded documents
+    const documents = await Document.find({ examId });
+    for (const doc of documents) {
+      if (doc.documentPath && typeof doc.documentPath === 'string') {
+        fs.unlink(doc.documentPath, (err) => {
+          if (err && err.code !== 'ENOENT') {
+            console.error('Error deleting uploaded document:', err);
+          }
+        });
+      }
+    }
+    await Document.deleteMany({ examId });
+
+    await UIDMap.deleteMany({ examId });
+
     // Delete the exam document
     await Examination.findByIdAndDelete(examId);
 

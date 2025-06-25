@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 const ScheduleExamOverlay = ({ isOpen, onClose, onSubmit, batch }) => {
-  const [formData, setFormData] = useState({
+  const initialState = {
     name: '',
     date: '',
     time: '',
@@ -10,7 +10,8 @@ const ScheduleExamOverlay = ({ isOpen, onClose, onSubmit, batch }) => {
     totalMarks: '',
     k: '',
     solutions: null,
-  });
+  };
+  const [formData, setFormData] = useState(initialState);
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -23,6 +24,7 @@ const ScheduleExamOverlay = ({ isOpen, onClose, onSubmit, batch }) => {
   const handleScheduleExamSubmit = (e) => {
     e.preventDefault();
     onSubmit({ ...formData, batch });
+    setFormData(initialState);
   };
 
   useEffect(() => {
