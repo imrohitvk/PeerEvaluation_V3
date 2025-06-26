@@ -1,4 +1,4 @@
-/* Responsive styles  */
+/* Responsive styles */
 
 html, body, #root {
     height: 100%;
@@ -12,7 +12,7 @@ html, body, #root {
 body {
     background: none !important;
 }
-.teacher-dashboard-bg {
+.student-dashboard-bg {
     min-height: 100vh;
     width: 100vw;
     background: linear-gradient(135deg, #ece9f7 0%, #c3cfe2 100%);
@@ -25,13 +25,13 @@ body {
     box-sizing: border-box;
     overflow: hidden;
 }
-.teacher-dashboard-container {
+.student-dashboard-container {
     display: flex;
     min-height: 100vh;
     width: 100%;
     position: relative;
 }
-.teacher-dashboard-sidebar {
+.student-dashboard-sidebar {
     position: relative;
     top: 0;
     left: 0;
@@ -42,30 +42,30 @@ body {
 .sidebar-toggle-btn {
     display: none;
 }
-.teacher-dashboard-main {
+.student-dashboard-main {
     flex: 1;
     margin-left: 0;
     transition: margin-left 0.3s;
 }
 @media (max-width: 900px) {
-    .teacher-dashboard-sidebar {
+    .student-dashboard-sidebar {
     width: 220px;
     padding: 1.5rem 0.75rem;
     }
-    .teacher-dashboard-main {
+    .student-dashboard-main {
     margin-left: 220px;
     padding: 1rem;
     }
 }
 @media (max-width: 700px) {
-    .teacher-dashboard-sidebar {
+    .student-dashboard-sidebar {
     left: -260px;
     width: 220px;
     border-radius: 0 20px 20px 0;
     box-shadow: 4px 0 12px rgba(0,0,0,0.1);
     transition: left 0.3s;
     }
-    .teacher-dashboard-sidebar.open {
+    .student-dashboard-sidebar.open {
     left: 0;
     }
     .sidebar-toggle-btn {
@@ -81,37 +81,21 @@ body {
     padding: 0.5rem 0.8rem;
     cursor: pointer;
     }
-    .teacher-dashboard-main {
+    .student-dashboard-main {
     margin-left: 0;
     padding: 1rem;
     transition: margin-left 0.3s;
     }
-    /* .teacher-dashboard-main.sidebar-open {
+    /* .student-dashboard-main.sidebar-open {
     } */
 }
 @media (max-width: 600px) {
-    .teacher-dashboard-content {
+    .student-dashboard-content {
     padding: 1rem;
     max-width: 100%;
     }
-    .teacher-dashboard-sidebar {
+    .student-dashboard-sidebar {
     padding: 1rem 0.5rem;
     width: 180px;
-    }
-}
-@media (max-width: 700px) {
-    div[style*="overflowY: 'auto'"]::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-    }
-
-    div[style*="overflowY: 'auto'"]::-webkit-scrollbar-thumb {
-    background-color: #d3d3d3; /* Light color for scrollbar thumb */
-    border-radius: 4px;
-    }
-
-    div[style*="overflowY: 'auto'"]::-webkit-scrollbar-track {
-    background-color: #f0f0f0; /* Light color for scrollbar track */
-    border-radius: 4px;
     }
 }

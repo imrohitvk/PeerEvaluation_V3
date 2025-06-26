@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfileMenu from '../components/User/ProfileMenu';
+import '../styles/Student/StudentDashboard.css';
+import { containerStyle, sidebarStyle, mainStyle, contentStyle, sidebarToggleBtnStyle, buttonStyle, sectionHeading } from '../styles/Student/StudentDashboard.js'
 import { FaBook, FaClipboardList, FaLaptopCode } from 'react-icons/fa';
 import { showMessage } from '../utils/Message';
 
 export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState('home');
-  const [user, setUser] = useState({ name: '', email: '', role: '' });
+  const [user, setUser] = useState({ name: '', email: '', role: '', isTA: false });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [taBatchInfo, setTaBatchInfo] = useState(null);
+  const [selectedTABatch, setSelectedTABatch] = useState('');
   const [dashboardStats, setDashboardStats] = useState({ courses: 0, pendingEvaluations: 0, activeExams: 0 });
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [availableCourses, setAvailableCourses] = useState([]);
@@ -49,6 +53,29 @@ export default function StudentDashboard() {
       })
       .catch(() => navigate('/login'));
   }, [navigate]);
+
+  useEffect(() => {
+    const fetchTABatchInfo = async () => {
+      const token = localStorage.getItem('token');
+      if (!token || !user.isTA) return;
+      try {
+        const res = await fetch('http://localhost:5000/api/ta/my-batches', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (res.ok && data) {
+          // Ensure taBatchInfo is always an array
+          setTaBatchInfo(Array.isArray(data) ? data : [data]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch TA batch info:", error);
+      }
+    };
+
+    fetchTABatchInfo();
+  }, [user.isTA]);
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -309,6 +336,9 @@ export default function StudentDashboard() {
             <button onClick={() => setActiveTab('course')} style={buttonStyle(activeTab === 'course')}>📚 Courses & Enrollment</button>
             <button onClick={() => setActiveTab('exam')} style={buttonStyle(activeTab === 'exam')}>📋 Exams</button>
             <button onClick={() => setActiveTab('evaluation')} style={buttonStyle(activeTab === 'evaluation')}>📝 Evaluations</button>
+            {user.isTA && (
+              <button onClick={() => setActiveTab('ta')} style={buttonStyle(activeTab === 'ta')}>🧑‍🏫 TA Panel</button>
+            )}
             <button onClick={logout} style={{ marginTop: 'auto', ...buttonStyle(false) }}>🚪 Logout</button>
           </>
         )}
@@ -636,210 +666,73 @@ export default function StudentDashboard() {
             <p style={{ color: '#3f3d56' }}>Implement evaluation details.</p>
           </div>
           )}
+
+          {activeTab === 'ta' && user.isTA && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559', width: '100%' }}>
+              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>TA Panel</h2>
+              {/* Filter Dropdown */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ fontSize: '1rem', fontWeight: 500 }}>Filter by Batch/Course: </label>
+                <select
+                  value={selectedTABatch || ''}
+                  onChange={e => setSelectedTABatch(e.target.value)}
+                  style={{
+                    minWidth: 180,
+                    padding: '0.6rem 1.2rem',
+                    borderRadius: '8px',
+                    border: '1.5px solid #4b3c70',
+                    fontSize: '1rem',
+                    background: '#fff',
+                    color: '#000',
+                    fontWeight: 500,
+                    transition: 'background 0.2s',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">All Assignments</option>
+                  {taBatchInfo && taBatchInfo.map((assignment, idx) => (
+                    <option key={idx} value={assignment.batchId}>
+                      {assignment.courseName} - {assignment.batchId}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {/* Table */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #4b3c70' }}>
+                <thead style={{ backgroundColor: '#4b3c70', color: '#ffffff', position: 'sticky', top: 0, zIndex: 1 }}>
+                  <tr>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Course Name</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Course ID</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Batch ID</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Instructor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {taBatchInfo && taBatchInfo.length > 0 ? (
+                    (selectedTABatch
+                      ? taBatchInfo.filter(a => a.batchId === selectedTABatch)
+                      : taBatchInfo
+                    ).map((assignment, idx) => (
+                      <tr key={idx}>
+                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{assignment.courseName}</td>
+                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{assignment.courseId}</td>
+                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{assignment.batchId}</td>
+                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{assignment.instructorName}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', padding: '1rem' }}>Loading your assigned TA batch info...</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
         </div>
       </main>
-
-      {/* Responsive styles */}
-      <style>
-        {`
-        html, body, #root {
-          height: 100%;
-          width: 100%;
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-          background: none !important;
-          overflow: hidden !important;
-        }
-        body {
-          background: none !important;
-        }
-        .student-dashboard-bg {
-          min-height: 100vh;
-          width: 100vw;
-          background: linear-gradient(135deg, #ece9f7 0%, #c3cfe2 100%);
-          display: flex;
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          box-sizing: border-box;
-          overflow: hidden;
-        }
-        .student-dashboard-container {
-          display: flex;
-          min-height: 100vh;
-          width: 100%;
-          position: relative;
-        }
-        .student-dashboard-sidebar {
-          position: relative;
-          top: 0;
-          left: 0;
-          height: auto;
-          min-height: 100vh;
-          z-index: 1;
-        }
-        .sidebar-toggle-btn {
-          display: none;
-        }
-        .student-dashboard-main {
-          flex: 1;
-          margin-left: 0;
-          transition: margin-left 0.3s;
-        }
-        @media (max-width: 900px) {
-          .student-dashboard-sidebar {
-            width: 220px;
-            padding: 1.5rem 0.75rem;
-          }
-          .student-dashboard-main {
-            margin-left: 220px;
-            padding: 1rem;
-          }
-        }
-        @media (max-width: 700px) {
-          .student-dashboard-sidebar {
-            left: -260px;
-            width: 220px;
-            border-radius: 0 20px 20px 0;
-            box-shadow: 4px 0 12px rgba(0,0,0,0.1);
-            transition: left 0.3s;
-          }
-          .student-dashboard-sidebar.open {
-            left: 0;
-          }
-          .sidebar-toggle-btn {
-            display: block;
-            position: fixed;
-            top: 1.2rem;
-            left: 1.2rem;
-            z-index: 1100;
-            background: #3f3d56;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.5rem 0.8rem;
-            cursor: pointer;
-          }
-          .student-dashboard-main {
-            margin-left: 0;
-            padding: 1rem;
-            transition: margin-left 0.3s;
-          }
-          .student-dashboard-main.sidebar-open {
-            /* Optionally add overlay effect or dim background */
-          }
-        }
-        @media (max-width: 600px) {
-          .student-dashboard-content {
-            padding: 1rem;
-            max-width: 100%;
-          }
-          .student-dashboard-sidebar {
-            padding: 1rem 0.5rem;
-            width: 180px;
-          }
-        }
-      `}
-      </style>
     </div>
   );
 }
-
-const containerStyle = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  minHeight: '100vh',
-  minWidth: '100vw',
-  height: '100vh',
-  width: '100vw',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: 'linear-gradient(135deg, #ece9f7 0%, #c3cfe2 100%)',
-  padding: '2rem',
-  boxSizing: 'border-box',
-  zIndex: 0
-};
-
-const sidebarStyle = {
-  width: '250px',
-  // background: '#3f3d56',
-  background: 'linear-gradient(90deg, #3f3d56 0%, #5c5470 100%)',
-  color: 'white',
-  padding: '2rem 1rem',
-  borderTopRightRadius: '20px',
-  borderBottomRightRadius: '20px',
-  boxShadow: '4px 0 12px rgba(0,0,0,0.1)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1.25rem',
-  minWidth: 0,
-  boxSizing: 'border-box',
-  height: '100vh',
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  zIndex: 1000,
-};
-
-const mainStyle = {
-  flex: 1,
-  padding: '3rem 2rem',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'flex-start',
-  minWidth: 0,
-  boxSizing: 'border-box',
-  marginLeft: '250px',
-  transition: 'margin-left 0.3s',
-};
-
-const contentStyle = {
-  background: '#ffffff',
-  borderRadius: '20px',
-  boxShadow: '0 8px 32px rgba(60,60,120,0.12)',
-  padding: '2rem',
-  width: '100%',
-  height: '80vh',
-  minHeight: '500px',
-  margin: 'auto',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  boxSizing: 'border-box',
-};
-
-const sidebarToggleBtnStyle = {
-  display: 'none', // will be overridden by CSS media queries
-};
-
-function buttonStyle(active) {
-  return {
-    background: active ? '#4a4e69' : 'transparent',
-    color: 'white',
-    padding: '0.75rem 1rem',
-    textAlign: 'left',
-    border: 'none',
-    cursor: 'pointer',
-    fontWeight: 500,
-    borderRadius: '8px',
-    transition: 'background 0.2s ease',
-    fontSize: '1rem',
-    textTransform: 'capitalize',
-    width: '100%',
-    boxSizing: 'border-box'
-  };
-}
-
-const sectionHeading = {
-  fontSize: '1.8rem',
-  fontWeight: 'bold',
-  color: '#3f3d56',
-  marginBottom: '1.25rem'
-};

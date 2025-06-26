@@ -6,6 +6,7 @@ import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import teachRoutes from "./routes/teachRoutes.js";
+import taRoutes from "./routes/taRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import { fileURLToPath } from 'url';
 
@@ -25,6 +26,7 @@ app.use(express.json());
 // Get the directory name in ES module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 // Serve static files from the uploads folder
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -35,6 +37,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/teacher", teachRoutes);
+app.use("/api/ta", taRoutes);
 app.use("/api/student", studentRoutes);
 
 // Connect to DB and start server
