@@ -146,6 +146,7 @@ export const getAllExamsForStudent = async (req, res) => {
     const enrollments = await Enrollment.find({ student: studentId, status: 'active' });
     const batchIds = enrollments.map(e => e.batch);
     const filter = batchId ? { batch: batchId } : { batch: { $in: batchIds } };
+    filter.completed = false;
     const exams = await Examination.find(filter);
     res.json(exams);
   } catch (err) {

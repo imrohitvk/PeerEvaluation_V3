@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfileMenu from '../components/User/ProfileMenu';
 import '../styles/Student/StudentDashboard.css';
+import EnrolledCoursesSection from '../components/Student/EnrolledCoursesSection';
+import EnrollmentRequestSection from '../components/Student/EnrollmentRequestSection';
+import StudentExamsTab from '../components/Student/StudentExamsTab';
 import { containerStyle, sidebarStyle, mainStyle, contentStyle, sidebarToggleBtnStyle, buttonStyle, sectionHeading } from '../styles/Student/StudentDashboard.js'
 import { FaBook, FaClipboardList, FaLaptopCode } from 'react-icons/fa';
 import { showMessage } from '../utils/Message';
@@ -254,7 +257,7 @@ export default function StudentDashboard() {
     }
   };
 
-    const handleSidebarToggle = () => setSidebarOpen(open => !open);
+  const handleSidebarToggle = () => setSidebarOpen(open => !open);
 
   return (
     <div
@@ -444,220 +447,34 @@ export default function StudentDashboard() {
                 width: '100%'
               }}>
                 {/* Enrolled Courses Section */}
-                <div style={{
-                  flex: 1,
-                  minWidth: 190,
-                  maxWidth: 500,
-                  borderRadius: '18px',
-                  boxShadow: '0 4px 16px rgba(60,60,120,0.10)',
-                  padding: '2rem 2.5rem',
-                  border: '1.5px solid #4b3c70',
-                }}>
-                  <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', marginBottom: '1.2rem', letterSpacing: '0.5px' }}>
-                    Enrolled Courses
-                  </h3>
-                  <div style={{
-                    maxHeight: '400px',
-                    overflowY: 'auto',
-                    scrollbarWidth: 'thin',
-                    scrollbarColor: ' #4b3c70 transparent',
-                  }}>
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 5 }}>
-                      {enrolledCourses.length === 0 ? (
-                        <li style={{ fontStyle: 'italic' }}>No enrolled courses found.</li>
-                      ) : (
-                        enrolledCourses.map((item, idx) => (
-                          <li key={idx} style={{
-                            marginBottom: '0.75rem',
-                            padding: '0.85rem 1.2rem',
-                            background: '#fff',
-                            borderRadius: '8px',
-                            boxShadow: '0 2px 8px #4b3c70',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            color: ' #2d3559'
-                          }}>
-                            <span style={{ fontWeight: 600 }}>{item.courseName}</span>
-                            <span style={{
-                              color: '#fff',
-                              background: ' #4b3c70',
-                              borderRadius: '6px',
-                              padding: '0.3rem 1rem',
-                              fontWeight: 500,
-                              fontSize: '0.98rem'
-                            }}>
-                              Batch: {item.batchName}
-                            </span>
-                          </li>
-                        ))
-                      )}
-                    </ul>
-                  </div>
-                </div>
+                <EnrolledCoursesSection enrolledCourses={enrolledCourses} />
 
                 {/* Enrollment Request Section */}
-                <div style={{
-                  flex: 1.3,
-                  minWidth: 200,
-                  maxWidth: 600,
-                  borderRadius: '18px',
-                  boxShadow: '0 4px 16px rgba(60,60,120,0.10)',
-                  padding: '2rem 2.5rem',
-                  border: '1.5px solid #4b3c70',
-                }}>
-                  <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', marginBottom: '1.2rem', letterSpacing: '0.5px' }}>
-                    New Enrollment
-                  </h3>
-                  <form style={{ display: 'flex', flexDirection: 'row', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }} onSubmit={handleEnrollmentRequest}>
-                    <div style={{ position: 'relative' }}>
-                      <select
-                        value={selectedCourse}
-                        onChange={e => setSelectedCourse(e.target.value)}
-                        style={{
-                          padding: '0.6rem 1.2rem',
-                          borderRadius: '8px',
-                          border: '1.5px solid #4b3c70',
-                          fontSize: '1rem',
-                          background: '#fff',
-                          color: '#000',
-                          fontWeight: 500,
-                          minWidth: '160px',
-                          transition: 'background 0.2s',
-                          outline: 'none',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <option value="">Select Course</option>
-                        {availableCourses.map(course => (
-                          <option key={course._id} value={course._id}>
-                            {course.courseName} ({course.courseId})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div style={{ position: 'relative' }}>
-                      <select
-                        value={selectedBatch}
-                        onChange={e => setSelectedBatch(e.target.value)}
-                        style={{
-                          padding: '0.6rem 1.2rem',
-                          borderRadius: '8px',
-                          border: '1.5px solid #4b3c70',
-                          fontSize: '1rem',
-                          background: selectedBatch ? ' #ffffff' : ' #f5f6fa',
-                          color: selectedBatch ? ' #000000' : ' #000000',
-                          fontWeight: 500,
-                          minWidth: '160px',
-                          transition: 'background 0.2s',
-                          outline: 'none',
-                          cursor: selectedCourse ? 'pointer' : 'not-allowed',
-                          opacity: selectedCourse ? 1 : 0.6,
-                        }}
-                        disabled={!selectedCourse}
-                      >
-                        <option value="">Select Batch</option>
-                        {availableBatches.map(batch => (
-                          <option key={batch._id} value={batch._id}>{batch.batchId}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <button
-                      type="submit"
-                      style={{
-                        background: selectedCourse && selectedBatch ? ' #4b3c70' : ' #a0a0a0',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '0.7rem 1.7rem',
-                        fontWeight: 600,
-                        fontSize: '1rem',
-                        cursor: selectedCourse && selectedBatch ? 'pointer' : 'not-allowed',
-                        boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
-                      }}
-                      disabled={!(selectedCourse && selectedBatch)}
-                    >
-                      Enroll
-                    </button>
-                  </form>
-
-                </div>
+                <EnrollmentRequestSection
+                  availableCourses={availableCourses}
+                  selectedCourse={selectedCourse}
+                  setSelectedCourse={setSelectedCourse}
+                  availableBatches={availableBatches}
+                  selectedBatch={selectedBatch}
+                  setSelectedBatch={setSelectedBatch}
+                  handleEnrollmentRequest={handleEnrollmentRequest}
+                />
               </div>
             </div>
           )}
           
           {activeTab === 'exam' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559', width: '100%' }}>
-              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Exams</h2>
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ fontSize: '1rem', fontWeight: 500 }}>Filter by Batch: </label>
-                <select
-                  value={selectedBatchForExam}
-                  onChange={e => setSelectedBatchForExam(e.target.value)}
-                  style={{ minWidth: 180, padding: '0.6rem 1.2rem', borderRadius: '8px', border: '1.5px solid #4b3c70', fontSize: '1rem', background: '#fff', color: '#000', fontWeight: 500, transition: 'background 0.2s', outline: 'none', cursor: 'pointer' }}
-                >
-                  <option value="">All Batches</option>
-                  {studentBatches.map(batch => (
-                    <option key={batch._id} value={batch._id}>
-                      {batch.courseName} - {batch.batchId}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {/* style={{ maxHeight: '300px', maxWidth: '1300px', overflowY: 'auto', overflowX: 'auto', scrollbarWidth: 'thin', scrollbarColor: ' #4b3c70 transparent' }} */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #4b3c70' }}>
-                <thead style={{ backgroundColor: '#4b3c70', color: '#ffffff', position: 'sticky', top: 0, zIndex: 1 }}>
-                  <tr>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Exam Name</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Date</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Time</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Upload File</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {batchExams.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} style={{ textAlign: 'center', padding: '1rem' }}>No exams found.</td>
-                    </tr>
-                  ) : (
-                    batchExams.map(exam => (
-                      <tr key={exam._id}>
-                        <td style={{ padding: '12px', fontWeight: 500 }}>{exam.name}</td>
-                        <td style={{ padding: '12px', fontWeight: 500 }}>{new Date(exam.date).toLocaleDateString()}</td>
-                        <td style={{ padding: '12px', fontWeight: 500 }}>{exam.time}</td>
-                        <td style={{ padding: '12px', fontWeight: 500 }}>
-                          <input
-                            type="file"
-                            accept=".pdf,.doc,.docx"
-                            ref={el => (fileInputRefs.current[exam._id] = el)}
-                            onChange={e => handleExamFileChange(exam._id, e.target.files[0])}
-                            style={{ marginBottom: 4 }}
-                          />
-                          <button
-                            onClick={() => handleExamFileUpload(exam._id)}
-                            disabled={!examFileMap[exam._id]}
-                            style={{
-                              background: examFileMap[exam._id] ? '#4b3c70' : '#a0a0a0',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              padding: '0.4rem 1.2rem',
-                              fontWeight: 500,
-                              cursor: examFileMap[exam._id] ? 'pointer' : 'not-allowed',
-                            }}
-                          >
-                            Upload
-                          </button>
-                          {/* Removed uploadMsgMap display */}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <StudentExamsTab
+              sectionHeading={sectionHeading}
+              studentBatches={studentBatches}
+              selectedBatchForExam={selectedBatchForExam}
+              setSelectedBatchForExam={setSelectedBatchForExam}
+              batchExams={batchExams}
+              fileInputRefs={fileInputRefs}
+              handleExamFileChange={handleExamFileChange}
+              handleExamFileUpload={handleExamFileUpload}
+              examFileMap={examFileMap}
+            />
           )}
 
           {activeTab === 'evaluation' && (
@@ -690,7 +507,7 @@ export default function StudentDashboard() {
                     cursor: 'pointer'
                   }}
                 >
-                  <option value="">All Assignments</option>
+                  <option value="">All Batches</option>
                   {taBatchInfo && taBatchInfo.map((assignment, idx) => (
                     <option key={idx} value={assignment.batchId}>
                       {assignment.courseName} - {assignment.batchId}
