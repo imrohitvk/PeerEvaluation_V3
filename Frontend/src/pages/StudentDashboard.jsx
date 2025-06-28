@@ -435,7 +435,7 @@ export default function StudentDashboard() {
 
           {activeTab === 'course' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#2d3559', width: '100%' }}>
-              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: ' #4b3c70', width: '100%' }}>
+              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'center', color: ' #4b3c70', width: '100%' }}>
                 Courses & Enrollment
               </h2>
 
@@ -478,18 +478,19 @@ export default function StudentDashboard() {
           )}
 
           {activeTab === 'evaluation' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559' }}>
-            <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Evaluation</h2>
-            <p style={{ color: '#3f3d56' }}>Implement evaluation details.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#2d3559' }}>
+            <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', color: '#3f3d56' }}>Evaluations</h2>
           </div>
           )}
 
           {activeTab === 'ta' && user.isTA && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#2d3559', width: '100%' }}>
-              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>TA Panel</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', color: '#2d3559', width: '100%' }}>
+              <div style={{ alignItems: 'center' }}>
+                <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>TA Panel</h2>
+              </div>
               {/* Filter Dropdown */}
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ fontSize: '1rem', fontWeight: 500 }}>Filter by Batch/Course: </label>
+              <div style={{ marginBottom: '1rem', alignItems: 'left', width: '100%' }}>
+                <label style={{ fontSize: '1rem', fontWeight: 500, textAlign: 'left' }}>Filter by Batch/Course: </label>
                 <select
                   value={selectedTABatch || ''}
                   onChange={e => setSelectedTABatch(e.target.value)}

@@ -356,7 +356,7 @@ export const scheduleExam = async (req, res) => {
 export const getExamsForTeacher = async (req, res) => {
   try {
     const teacherId = req.user._id; // Assuming req.user contains the authenticated teacher's info
-    const examss = await Examination.find({ createdBy: teacherId })
+    const examss = await Examination.find({ createdBy: teacherId, completed: false })
       .populate({
       path: 'batch',
       select: 'batchId'
@@ -420,6 +420,26 @@ export const updateExam = async (req, res) => {
     res.status(500).json({ message: 'Failed to update exam' });
   }
 };
+
+export const completeExam = async (req, res) => {
+  try {
+    const { examId } = req.params;
+
+    const exam = await Examination.findById(examId);
+
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+
+    exam.completed = true;
+    await exam.save();
+
+    res.status(200).json({ message: 'Exam marked as completed successfully!' });
+  } catch (error) {
+    // console.error('Error marking exam as completed:', error);
+    res.status(500).json({ message: 'Failed to mark exam as completed!' });
+  }
+}
 
 export const deleteExam = async (req, res) => {
   try {

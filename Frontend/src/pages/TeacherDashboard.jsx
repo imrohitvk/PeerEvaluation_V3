@@ -461,6 +461,28 @@ export default function TeacherDashboard() {
     }
   };
 
+  const handleMarkAsDone = async (examId) => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch(`http://localhost:5000/api/teacher/mark-exam-done/${examId}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        // Remove the exam from the list in state
+        setExams(prev => prev.filter(exam => exam._id !== examId));
+        showMessage(data.message, 'success');
+      } else {
+        showMessage(data.message, 'error');
+      }
+    } catch (err) {
+      showMessage('Failed to mark exam as done!', 'error');
+    }
+  };
+
   function showDeleteExamDialog() {
     return new Promise((resolve) => {
       // Create overlay
@@ -973,6 +995,7 @@ export default function TeacherDashboard() {
                 handleDownloadPDF={handleDownloadPDF} 
                 handleBulkUploadClick={handleBulkUploadClick} 
                 handleSendEvaluation={handleSendEvaluation} 
+                handleMarkAsDone={handleMarkAsDone}
                 handleDeleteExam={handleDeleteExam} 
               />
             </div>

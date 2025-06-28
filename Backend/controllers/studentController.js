@@ -19,11 +19,32 @@ export const getStudentDashboardStats = async (req, res) => {
       evaluationStatus: 'pending'
     });
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    // Get all not-completed exams for today
+    const todaysExams = await Examination.find({
+      completed: false,
+      date: { $gte: today, $lt: tomorrow }
+    });
+
+    let activeExams = 0;
     const now = new Date();
-    const activeExams = await Examination.countDocuments({
-      startTime: { $lte: now },
-      endTime: { $gte: now },
-      'enrolledStudents': studentId
+
+    todaysExams.forEach(exam => {
+      // exam.time is "HH:MM"
+      const [startHour, startMinute] = exam.time.split(':').map(Number);
+      const examStart = new Date(exam.date);
+      examStart.setHours(startHour, startMinute, 0, 0);
+
+      const examEnd = new Date(examStart.getTime() + exam.duration * 60000);
+
+      if (now >= examStart && now < examEnd) {
+        activeExams += 1;
+      }
     });
 
     res.json({

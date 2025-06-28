@@ -1,7 +1,7 @@
 import React from 'react';
-import { FaEdit, FaDownload, FaUpload, FaPaperPlane, FaTrashAlt } from 'react-icons/fa';
+import { FaEdit, FaDownload, FaUpload, FaPaperPlane, FaTrashAlt, FaCheck } from 'react-icons/fa';
 
-const ExamList = ({ exams, handleEditClick, handleDownloadPDF, handleBulkUploadClick, handleSendEvaluation, handleDeleteExam }) => {
+const ExamList = ({ exams, handleEditClick, handleDownloadPDF, handleBulkUploadClick, handleSendEvaluation, handleMarkAsDone, handleDeleteExam }) => {
   return (
     <div style={{ marginTop: '2rem', maxHeight: '350px', border: '1px solid #ddd', borderRadius: '12px' }}>
       <h3 style={{ color: '#3f3d56', fontWeight: 'bold', marginBottom: '1rem' }}>Exams</h3>
@@ -61,12 +61,12 @@ const ExamList = ({ exams, handleEditClick, handleDownloadPDF, handleBulkUploadC
                         <button
                           onClick={() => handleEditClick(exam)}
                           style={{
-                            padding: '0.5rem 1rem',
+                            // padding: '0.5rem 1rem',
                             borderRadius: '8px',
                             color: '#ffffff',
                             background: 'none',
                             border: ' #006400 1px solid',
-                            fontSize: '0.95rem',
+                            fontSize: '0.6rem',
                             fontWeight: 'bold',
                             cursor: 'pointer',
                           }}
@@ -78,12 +78,12 @@ const ExamList = ({ exams, handleEditClick, handleDownloadPDF, handleBulkUploadC
                         <button
                           onClick={() => handleDownloadPDF(exam._id)} // Pass examId when clicking the button
                           style={{
-                            padding: '0.5rem 1rem',
+                            // padding: '0.5rem 1rem',
                             borderRadius: '8px',
                             color: '#ffffff',
                             background: 'none',
                             border: ' #00008b 1px solid', // Indigo shade
-                            fontSize: '0.95rem',
+                            fontSize: '0.6rem',
                             fontWeight: 'bold',
                             cursor: 'pointer',
                             display: 'flex',
@@ -98,12 +98,12 @@ const ExamList = ({ exams, handleEditClick, handleDownloadPDF, handleBulkUploadC
                         <button
                           onClick={() => handleBulkUploadClick(exam._id)} // Pass examId when clicking the button
                           style={{
-                            padding: '0.5rem 1rem',
+                            // padding: '0.5rem 1rem',
                             borderRadius: '8px',
                             color: '#ffffff',
                             background: 'none',
                             border: ' #6a0dad 1px solid',
-                            fontSize: '0.95rem',
+                            fontSize: '0.6rem',
                             fontWeight: 'bold',
                             cursor: 'pointer',
                           }}
@@ -114,12 +114,12 @@ const ExamList = ({ exams, handleEditClick, handleDownloadPDF, handleBulkUploadC
                         <button
                           onClick={() => handleSendEvaluation(exam._id)}
                           style={{
-                            padding: '0.5rem 1rem',
+                            // padding: '0.5rem 1rem',
                             borderRadius: '8px',
                             color: '#ffffff',
                             background: 'none',
-                            border: '#007bff 1px solid',
-                            fontSize: '0.95rem',
+                            border: ' #007bff 1px solid',
+                            fontSize: '0.6rem',
                             fontWeight: 'bold',
                             cursor: 'pointer',
                           }}
@@ -127,15 +127,36 @@ const ExamList = ({ exams, handleEditClick, handleDownloadPDF, handleBulkUploadC
                         >
                           <FaPaperPlane style={{ color: ' #007bff', fontSize: '1.2rem' }} />
                         </button>
+
+                        <button
+                          onClick={() => handleMarkAsDone(exam._id)}
+                          style={{
+                            // padding: '0.5rem 1rem',
+                            borderRadius: '8px',
+                            color: '#ffffff',
+                            background: 'none',
+                            border: ' #28a745 1px solid',
+                            fontSize: '0.6rem',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          title="Mark as Done"
+                        >
+                          <FaCheck style={{ color: ' #28a745', fontSize: '1.2rem' }} />
+                        </button>
+
                         <button
                           onClick={() => handleDeleteExam(exam._id)}
                           style={{
-                            padding: '0.5rem 1rem',
+                            // padding: '0.5rem 1rem',
                             borderRadius: '8px',
                             color: '#ffffff',
                             background: 'none',
                             border: '#c0392b 1px solid',
-                            fontSize: '0.95rem',
+                            fontSize: '0.6rem',
                             fontWeight: 'bold',
                             cursor: 'pointer',
                           }}

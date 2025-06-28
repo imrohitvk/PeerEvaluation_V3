@@ -16,7 +16,7 @@ export default function StudentExamsTab({
       style={{
         display: "flex",
         flexDirection: "column",
-        alignItems: "flex-start",
+        alignItems: "center",
         color: "#2d3559",
         width: "100%",
       }}
@@ -26,7 +26,7 @@ export default function StudentExamsTab({
           ...sectionHeading,
           marginTop: 0,
           marginBottom: "2rem",
-          textAlign: "left",
+          textAlign: 'center',
           color: "#3f3d56",
         }}
       >
@@ -93,7 +93,7 @@ export default function StudentExamsTab({
         <tbody>
           {batchExams.length === 0 ? (
             <tr>
-              <td colSpan={4} style={{ textAlign: "center", padding: "1rem" }}>
+              <td colSpan={5} style={{ textAlign: "center", padding: "1rem" }}>
                 No exams found.
               </td>
             </tr>
