@@ -606,16 +606,48 @@ export const bulkUploadDocuments = async (req, res) => {
 
 // TODO: Implement the logic to send evaluations to students
 export const sendEvaluation = async (req, res) => {
-  const { examId } = req.params;
+  const { examId } = req.params; 
 
   if (!examId) {
     return res.status(400).json({ message: 'Exam ID is required' });
   }
+  const exam = await Examination.findById(examId);
+  if (!exam) {
+    return res.status(404).json({ message: 'Exam not found' });
+  }
 
   try {
     // Replace with actual evaluation logic
-    res.status(200).json({ message: 'Evaluation sent successfully' });
+    console.log(`Sending evaluation for exam ID: ${examId}`);
+
+    exam.evaluations_sent = true;
+    await exam.save();
+    res.status(200).json({ message: 'Evaluation sent successfully!' });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to send evaluation' });
+    res.status(500).json({ message: 'Failed to send evaluation!' });
+  }
+};
+
+// TODO: Implement the logic to flag evaluations
+export const flagEvaluations = async (req, res) => {
+  const { examId } = req.params; 
+
+  if (!examId) {
+    return res.status(400).json({ message: 'Exam ID is required!' });
+  }
+  const exam = await Examination.findById(examId);
+  if (!exam) {
+    return res.status(404).json({ message: 'Exam not found!' });
+  }
+
+  try {
+    // Replace with actual flagging logic
+    console.log(`Flagging evaluations for exam ID: ${examId}`);
+
+    exam.flags = true; // Mark as evaluations flagged
+    await exam.save();
+    res.status(200).json({ message: 'Evaluations flagged successfully!' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to flag evaluations!' });
   }
 };
