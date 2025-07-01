@@ -6,6 +6,7 @@ import { Examination } from '../models/Examination.js';
 import { Document } from '../models/Document.js';
 import { UIDMap } from '../models/UIDMap.js';
 import { TA } from '../models/TA.js';
+import { PeerEvaluation } from '../models/PeerEvaluation.js';
 import csv from 'csv-parser';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
@@ -604,26 +605,82 @@ export const bulkUploadDocuments = async (req, res) => {
   }
 };
 
-// TODO: Implement the logic to send evaluations to students
 export const sendEvaluation = async (req, res) => {
-  const { examId } = req.params; 
+  const { examId } = req.params;
 
   if (!examId) {
     return res.status(400).json({ message: 'Exam ID is required' });
   }
+
   const exam = await Examination.findById(examId);
   if (!exam) {
     return res.status(404).json({ message: 'Exam not found' });
   }
 
   try {
-    // Replace with actual evaluation logic
-    console.log(`Sending evaluation for exam ID: ${examId}`);
+    const documentsWithoutUserId = await Document.find({ examId });
+    const uidMaps = await UIDMap.find({ examId });
+    const students = await Enrollment.find({ batch: exam.batch, status: 'active' }).populate('student');
+    const documents = documentsWithoutUserId.map((doc) => {
+      const matchingUidMap = uidMaps.find((uidMap) => uidMap.uniqueId === doc.uniqueId);
+      return {
+        ...doc.toObject(), // Convert Mongoose document to plain object
+        userId: matchingUidMap ? matchingUidMap.userId : null, // Map userId if found
+      };
+    });
+
+    if (!documents.length || !students.length) {
+      return res.status(404).json({ message: 'No documents or students found for this exam.' });
+    }
+
+    const studentMap = new Map(); // Map to track evaluations assigned to each student
+
+    // Initialize studentMap with empty arrays for evaluations
+    students.forEach((enrollment) => {
+      studentMap.set(enrollment.student._id.toString(), []);
+    });
+
+    // Ensure each student evaluates exactly `k` documents
+    for (const document of documents) {
+      const eligibleEvaluators = students.filter(
+        (enrollment) =>
+          document.uniqueId && // Check if document.uniqueId exists
+          document.userId && // Check if document.userId exists
+          enrollment.student._id.toString() !== document.userId.toString() &&
+          studentMap.get(enrollment.student._id.toString()).length < exam.k
+      );
+
+      if (eligibleEvaluators.length < exam.k) {
+        return res.status(400).json({
+          message: `Not enough eligible evaluators for document ${document._id}. Constraints cannot be satisfied.`,
+        });
+      }
+
+      // Randomly assign `k` evaluators to the document
+      const assignedEvaluators = eligibleEvaluators
+        .sort(() => Math.random() - 0.5)
+        .slice(0, exam.k);
+
+      for (const evaluator of assignedEvaluators) {
+        const evaluatorId = evaluator.student._id.toString();
+        studentMap.get(evaluatorId).push(document._id);
+      
+        await PeerEvaluation.create({
+          evaluator: evaluator.student._id,
+          uid: document.uniqueId,
+          student: document.userId,
+          exam: examId,
+          document: document._id,
+        });
+      }
+    }
 
     exam.evaluations_sent = true;
     await exam.save();
+
     res.status(200).json({ message: 'Evaluation sent successfully!' });
   } catch (error) {
+    console.error('Error sending evaluations:', error);
     res.status(500).json({ message: 'Failed to send evaluation!' });
   }
 };
