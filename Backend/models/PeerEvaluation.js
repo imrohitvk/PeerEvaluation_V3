@@ -11,6 +11,7 @@ const PeerEvaluationSchema = new mongoose.Schema({
     feedback: { type: String, required: true, default: 'NA' }, 
     ticket: { type: Number, required: true, default: 0 }, 
     score: { type: Number, required: true, default: -1 }, 
+    eval_status: { type: String, enum: ['pending', 'completed'], default: 'pending' },
 });
 
 export const PeerEvaluation = mongoose.model('PeerEvaluation', PeerEvaluationSchema);

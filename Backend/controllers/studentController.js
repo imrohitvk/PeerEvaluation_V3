@@ -5,6 +5,7 @@ import { Document } from '../models/Document.js';
 import { Batch } from '../models/Batch.js';
 import { Course } from '../models/Course.js';
 import { UIDMap } from '../models/UIDMap.js';
+import { PeerEvaluation } from '../models/PeerEvaluation.js';
 import fs from 'fs';
 
 export const getStudentDashboardStats = async (req, res) => {
@@ -245,5 +246,70 @@ export const uploadExamDocument = async (req, res) => {
       console.warn('Failed to delete new document file:', err);
     }
     res.status(500).json({ message: 'Failed to upload document!' });
+  }
+};
+
+export const getEvaluationsByBatchAndExam = async (req, res) => {
+  try {
+    const { examId } = req.query;
+    const studentId = req.user._id; // Assuming user ID is available in req.user
+
+    // Fetch evaluations assigned to the student
+    const query = { evaluator: studentId };
+    if (examId) query.exam = examId;
+
+    const evaluations = await PeerEvaluation.find(query)
+      .populate('exam')//, 'name date time duration totalMarks batch') // Include batch in exam population
+      .populate('document')//, 'uniqueId documentPath uploadedOn');
+
+    console.log('Evaluations fetched:', evaluations);
+
+    // Create a map to store batchId and courseName for each unique examId
+    const batchCourseMap = {};
+
+    // Fetch batchId and courseName for each unique examId
+    for (const evaluation of evaluations) {
+      const exam = evaluation.exam;
+      if (exam && exam.batch && !batchCourseMap[exam._id]) {
+        const batch = await Batch.findOne({ _id: exam.batch }).populate('course', 'courseName');
+        if (batch) {
+          batchCourseMap[exam._id] = {
+            batchId: batch.batchId,
+            courseName: batch.course ? batch.course.courseName : 'Unknown Course',
+          };
+        }
+      }
+    }
+
+    // Format the response
+    const formattedEvaluations = evaluations.map(evaluation => {
+      const exam = evaluation.exam;
+      const document = evaluation.document;
+
+      return {
+        examId: exam._id,
+        examName: exam.name,
+        examDate: exam.date,
+        examTime: exam.time,
+        examDuration: exam.duration,
+        examTotalMarks: exam.totalMarks,
+        batchId: batchCourseMap[exam._id]?.batchId, // Use the batchId from the map
+        courseName: batchCourseMap[exam._id]?.courseName, // Use the courseName from the map
+        documentId: document._id,
+        documentUniqueId: document.uniqueId,
+        documentPath: document.documentPath,
+        documentUploadedOn: document.uploadedOn,
+        feedback: evaluation.feedback,
+        score: evaluation.score,
+        ticket: evaluation.ticket,
+        deadline: evaluation.deadline,
+        status: evaluation.eval_status,
+      };
+    });
+
+    res.status(200).json(formattedEvaluations);
+  } catch (error) {
+    console.error('Error fetching evaluations:', error);
+    res.status(500).json({ message: 'Failed to fetch evaluations.' });
   }
 };
