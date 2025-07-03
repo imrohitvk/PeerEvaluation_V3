@@ -5,6 +5,7 @@ import '../styles/Student/StudentDashboard.css';
 import EnrolledCoursesSection from '../components/Student/EnrolledCoursesSection';
 import EnrollmentRequestSection from '../components/Student/EnrollmentRequestSection';
 import StudentExamsTab from '../components/Student/StudentExamsTab';
+import EvaluationsTable from '../components/Student/EvaluationTable';
 import { containerStyle, sidebarStyle, mainStyle, contentStyle, sidebarToggleBtnStyle, buttonStyle, sectionHeading } from '../styles/Student/StudentDashboard.js'
 import { FaBook, FaClipboardList, FaLaptopCode } from 'react-icons/fa';
 import { showMessage } from '../utils/Message';
@@ -197,7 +198,6 @@ export default function StudentDashboard() {
     if (activeTab !== 'evaluation') return;
 
     const fetchEvaluations = async () => {
-      console.log('Fetching evaluations for tab:', activeTab);
       const token = localStorage.getItem('token');
       if (!token) return;
 
@@ -331,7 +331,7 @@ export default function StudentDashboard() {
         position: 'fixed',
         top: 24,
         right: 36,
-        zIndex: 2000,
+        zIndex: 999,
         display: 'flex',
         alignItems: 'center',
       }}>
@@ -345,7 +345,7 @@ export default function StudentDashboard() {
           position: 'absolute',
           top: '1rem',
           left: '1rem',
-          zIndex: 1100,
+          zIndex: 999,
           background: 'none',
           border: 'none',
           cursor: 'pointer',
@@ -525,87 +525,12 @@ export default function StudentDashboard() {
           {activeTab === 'evaluation' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#2d3559', width: '100%' }}>
               <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', color: '#3f3d56' }}>Evaluations</h2>
-
-              {/* Filter Dropdown */}
-              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', width: '100%', justifyContent: 'center' }}>
-                <select
-                  value={selectedExam || ''}
-                  onChange={e => setSelectedExam(e.target.value)}
-                  style={{
-                    width: 'auto',
-                    maxWidth: '100%',
-                    minWidth: 180,
-                    padding: '0.6rem 1.2rem',
-                    borderRadius: '8px',
-                    border: '1.5px solid #4b3c70',
-                    fontSize: '1rem',
-                    background: '#fff',
-                    color: '#000',
-                    fontWeight: 500,
-                    transition: 'background 0.2s',
-                    outline: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="">All Exams</option>
-                  {evaluationExams.map((exam, idx) => (
-                    <option key={idx} value={exam.examId}>
-                      {exam.courseName} ({exam.batchName}) - {exam.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Evaluations Table */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #4b3c70' }}>
-                <thead style={{ backgroundColor: '#4b3c70', color: '#ffffff', position: 'sticky', top: 0, zIndex: 1 }}>
-                  <tr>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Course Name</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Batch Id</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Exam Name</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Exam Date</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Exam Time</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {evaluations.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" style={{ padding: '12px', textAlign: 'center', fontWeight: 500, color: 'gray' }}>
-                        No evaluations found.
-                      </td>
-                    </tr>
-                  ) : (
-                    evaluations
-                      .filter(evaluation => !selectedExam || evaluation.examId === selectedExam)
-                      .map((evaluation, idx) => (
-                        <tr key={idx}>
-                          <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{evaluation.courseName}</td>
-                          <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{evaluation.batchId}</td>
-                          <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{evaluation.examName}</td>
-                          <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>
-                            {new Date(evaluation.examDate).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            })}
-                          </td>
-                          <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{evaluation.examTime}</td>
-                          <td
-                            style={{
-                              padding: '12px',
-                              textAlign: 'center',
-                              fontWeight: 500,
-                              color: evaluation.status === 'pending' ? 'red' : 'green', // Set color based on status
-                            }}
-                          >
-                            {evaluation.status === 'pending' ? 'Evaluate' : 'Evaluated'}
-                          </td>
-                        </tr>
-                      ))
-                  )}
-                </tbody>
-              </table>
+              <EvaluationsTable
+                evaluations={evaluations}
+                evaluationExams={evaluationExams}
+                selectedExam={selectedExam}
+                setSelectedExam={setSelectedExam}
+              />
             </div>
           )}
 

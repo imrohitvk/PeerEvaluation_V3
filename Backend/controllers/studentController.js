@@ -252,9 +252,8 @@ export const uploadExamDocument = async (req, res) => {
 export const getEvaluationsByBatchAndExam = async (req, res) => {
   try {
     const { examId } = req.query;
-    const studentId = req.user._id; // Assuming user ID is available in req.user
+    const studentId = req.user._id;
 
-    // Fetch evaluations assigned to the student
     const query = { evaluator: studentId };
     if (examId) query.exam = examId;
 
@@ -262,12 +261,8 @@ export const getEvaluationsByBatchAndExam = async (req, res) => {
       .populate('exam')//, 'name date time duration totalMarks batch') // Include batch in exam population
       .populate('document')//, 'uniqueId documentPath uploadedOn');
 
-    console.log('Evaluations fetched:', evaluations);
-
-    // Create a map to store batchId and courseName for each unique examId
     const batchCourseMap = {};
 
-    // Fetch batchId and courseName for each unique examId
     for (const evaluation of evaluations) {
       const exam = evaluation.exam;
       if (exam && exam.batch && !batchCourseMap[exam._id]) {
@@ -281,7 +276,6 @@ export const getEvaluationsByBatchAndExam = async (req, res) => {
       }
     }
 
-    // Format the response
     const formattedEvaluations = evaluations.map(evaluation => {
       const exam = evaluation.exam;
       const document = evaluation.document;
@@ -293,8 +287,10 @@ export const getEvaluationsByBatchAndExam = async (req, res) => {
         examTime: exam.time,
         examDuration: exam.duration,
         examTotalMarks: exam.totalMarks,
-        batchId: batchCourseMap[exam._id]?.batchId, // Use the batchId from the map
-        courseName: batchCourseMap[exam._id]?.courseName, // Use the courseName from the map
+        exam_number_of_Questions: exam.number_of_questions,
+        exam_solutions: exam.solutions,
+        batchId: batchCourseMap[exam._id]?.batchId,
+        courseName: batchCourseMap[exam._id]?.courseName,
         documentId: document._id,
         documentUniqueId: document.uniqueId,
         documentPath: document.documentPath,
@@ -309,7 +305,6 @@ export const getEvaluationsByBatchAndExam = async (req, res) => {
 
     res.status(200).json(formattedEvaluations);
   } catch (error) {
-    console.error('Error fetching evaluations:', error);
     res.status(500).json({ message: 'Failed to fetch evaluations.' });
   }
 };
