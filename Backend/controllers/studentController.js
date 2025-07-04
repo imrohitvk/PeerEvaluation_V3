@@ -260,7 +260,7 @@ export const getEvaluationsByBatchAndExam = async (req, res) => {
     const evaluations = await PeerEvaluation.find(query)
       .populate({
         path: 'exam',
-        match: { completed: false }
+        match: { flags: false }
       })//, 'name date time duration totalMarks batch') // Include batch in exam population
       .populate('document')//, 'uniqueId documentPath uploadedOn');
 

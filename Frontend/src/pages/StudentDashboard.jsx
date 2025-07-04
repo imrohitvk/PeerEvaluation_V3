@@ -224,7 +224,7 @@ export default function StudentDashboard() {
           return acc;
         }, []);
 
-        setEvaluationExams(uniqueExams); // Update dropdown options with unique exams
+        setEvaluationExams(uniqueExams);
       } else {
         setEvaluations([]);
         setEvaluationExams([]);
