@@ -15,9 +15,9 @@ export const getStudentDashboardStats = async (req, res) => {
 
     const coursesEnrolled = await Enrollment.countDocuments({ student: studentId , status: 'active' });
 
-    const pendingEvaluations = await Document.countDocuments({
-      uniqueId: studentId,
-      evaluationStatus: 'pending'
+    const pendingEvaluations = await PeerEvaluation.countDocuments({
+      evaluator: studentId,
+      eval_status: 'pending'
     });
 
     const today = new Date();
@@ -258,7 +258,10 @@ export const getEvaluationsByBatchAndExam = async (req, res) => {
     if (examId) query.exam = examId;
 
     const evaluations = await PeerEvaluation.find(query)
-      .populate('exam')//, 'name date time duration totalMarks batch') // Include batch in exam population
+      .populate({
+        path: 'exam',
+        match: { completed: false }
+      })//, 'name date time duration totalMarks batch') // Include batch in exam population
       .populate('document')//, 'uniqueId documentPath uploadedOn');
 
     const batchCourseMap = {};
@@ -281,6 +284,7 @@ export const getEvaluationsByBatchAndExam = async (req, res) => {
       const document = evaluation.document;
 
       return {
+        evaluationId: evaluation._id,
         examId: exam._id,
         examName: exam.name,
         examDate: exam.date,
@@ -306,5 +310,49 @@ export const getEvaluationsByBatchAndExam = async (req, res) => {
     res.status(200).json(formattedEvaluations);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch evaluations.' });
+  }
+};
+
+export const submitEvaluation = async (req, res) => {
+  try {
+    const { evaluationId, examId, marks, feedback } = req.body;
+
+    if (!examId || !Array.isArray(marks) || !Array.isArray(feedback)) {
+      return res.status(400).json({ message: "Invalid input data." });
+    }
+
+    if (marks.length !== feedback.length) {
+      return res.status(400).json({ message: "Marks and feedback arrays must have the same length." });
+    }
+
+    const totalMarks = marks.reduce((sum, mark) => sum + mark, 0);
+
+    const exam = await Examination.findById(examId);
+    if (!exam) {
+      return res.status(404).json({ message: "Exam not found!" });
+    }
+
+    if (totalMarks > exam.totalMarks) {
+      return res.status(400).json({ message: `Total marks (${totalMarks}) exceed the allowed maximum (${exam.totalMarks}).` });
+    }
+
+    const evaluation = await PeerEvaluation.findById({
+      _id: evaluationId,
+    });
+
+    if (!evaluation) {
+      return res.status(404).json({ message: "Evaluation not found!" });
+    }
+
+    evaluation.score = marks;
+    evaluation.feedback = feedback;
+    evaluation.evaluated_on = new Date();
+    evaluation.eval_status = 'completed';
+
+    await evaluation.save();
+
+    res.status(200).json({ message: "Evaluation updated successfully!" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to submit evaluation!" });
   }
 };

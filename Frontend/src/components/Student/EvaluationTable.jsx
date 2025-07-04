@@ -7,20 +7,12 @@ const EvaluationsTable = ({
   evaluationExams,
   selectedExam,
   setSelectedExam,
+  isOverlayOpen,
+  selectedEvaluation,
+  handleEvaluateClick,
+  closeEvalOverlay,
+  handleEvaluationSubmit,
 }) => {
-
-  const [isOverlayOpen, setIsOverlayOpen] = useState(false);
-  const [selectedEvaluation, setSelectedEvaluation] = useState(null);
-
-  const handleEvaluateClick = (evaluation) => {
-    setSelectedEvaluation(evaluation);
-    setIsOverlayOpen(true);
-  };
-
-  const closeOverlay = () => {
-    setIsOverlayOpen(false);
-    setSelectedEvaluation(null);
-  };
 
   return (
     <div
@@ -205,7 +197,7 @@ const EvaluationsTable = ({
 
       {isOverlayOpen && (
         <div
-          onClick={closeOverlay} // Close overlay when clicking outside
+          onClick={closeEvalOverlay} // Close overlay when clicking outside
           style={{
             position: "fixed",
             top: 0,
@@ -237,7 +229,7 @@ const EvaluationsTable = ({
           >
             {/* Close Button */}
             <button
-              onClick={closeOverlay}
+              onClick={closeEvalOverlay}
               style={{
                 position: "absolute",
                 top: "0.5rem",
@@ -317,10 +309,7 @@ const EvaluationsTable = ({
                   <div style={{ flex: 1, overflowY: "auto", paddingRight: "0.5rem" }}>
                     <form
                       id="evaluation-form"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        console.log("Form submitted");
-                      }}
+                      onSubmit={(e) => { handleEvaluationSubmit(e, selectedEvaluation)}}
                       style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
                     >
                       {Array.from({ length: selectedEvaluation?.exam_number_of_Questions || 0 }).map((_, index) => (
@@ -346,6 +335,8 @@ const EvaluationsTable = ({
                           <input
                             type="number"
                             placeholder="Marks"
+                            min="0"
+                            max={selectedEvaluation?.examTotalMarks || 0}
                             style={{
                               flex: 1,
                               padding: "0.4rem",

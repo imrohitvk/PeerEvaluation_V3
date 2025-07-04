@@ -29,9 +29,10 @@ export default function StudentDashboard() {
   const [selectedExam, setSelectedExam] = useState('');
   const [evaluationExams, setEvaluationExams] = useState([]);
   const [evaluations, setEvaluations] = useState([]);
+  const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+  const [selectedEvaluation, setSelectedEvaluation] = useState(null);
   const fileInputRefs = useRef({});
   const navigate = useNavigate();
-
 
   useEffect(() => {
     // Remove body background, handled by container now
@@ -62,25 +63,6 @@ export default function StudentDashboard() {
   }, [navigate]);
 
   useEffect(() => {
-    const fetchTABatchInfo = async () => {
-      const token = localStorage.getItem('token');
-      if (!token || !user.isTA) return;
-      try {
-        const res = await fetch('http://localhost:5000/api/ta/my-batches', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await res.json();
-        if (res.ok && data) {
-          // Ensure taBatchInfo is always an array
-          setTaBatchInfo(Array.isArray(data) ? data : [data]);
-        }
-      } catch (error) {
-        console.error("Failed to fetch TA batch info:", error);
-      }
-    };
-
     fetchTABatchInfo();
   }, [user.isTA]);
 
@@ -91,41 +73,9 @@ export default function StudentDashboard() {
   };
 
   useEffect(() => {
-    const fetchDashboardStats = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5000/api/student/dashboard-stats', {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-
-        if (
-          typeof data === 'object' &&
-          data !== null &&
-          'coursesEnrolled' in data &&
-          'pendingEvaluations' in data &&
-          'activeExams' in data
-        ) {
-          setDashboardStats({
-            courses: data.coursesEnrolled,
-            pendingEvaluations: data.pendingEvaluations,
-            activeExams: data.activeExams,
-          });
-        } else {
-          console.error('Invalid dashboard stats response:', data);
-          setDashboardStats({ courses: 0, pendingEvaluations: 0, activeExams: 0 });
-        }
-      } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
-        setDashboardStats({ courses: 0, pendingEvaluations: 0, activeExams: 0 });
-      }
-    };
-
+    if (activeTab !== 'home') return;
     fetchDashboardStats();
-  }, []);
+  }, [activeTab]);
 
   // Fetch enrolled courses and available courses on mount
   useEffect(() => {
@@ -196,46 +146,96 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     if (activeTab !== 'evaluation') return;
-
-    const fetchEvaluations = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      let url = 'http://localhost:5000/api/student/evaluations';
-
-      try {
-        const response = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await response.json();
-
-        if (Array.isArray(data)) {
-          setEvaluations(data);
-
-          // Extract unique exams from evaluations
-          const uniqueExams = data.reduce((acc, evaluation) => {
-            if (!acc.some(exam => exam.examId === evaluation.examId)) {
-              acc.push({ examId: evaluation.examId, name: evaluation.examName, courseName: evaluation.courseName, batchName: evaluation.batchId });
-            }
-            return acc;
-          }, []);
-
-          setEvaluationExams(uniqueExams); // Update dropdown options with unique exams
-        } else {
-          setEvaluations([]);
-          setEvaluationExams([]);
-        }
-      } catch (error) {
-        console.error('Failed to fetch evaluations:', error);
-        setEvaluations([]);
-        setEvaluationExams([]);
-      }
-    };
-
     fetchEvaluations();
   }, [activeTab]);
 
-  // Handle enrollment request
+  const fetchDashboardStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/student/dashboard-stats', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'coursesEnrolled' in data &&
+        'pendingEvaluations' in data &&
+        'activeExams' in data
+      ) {
+        setDashboardStats({
+          courses: data.coursesEnrolled,
+          pendingEvaluations: data.pendingEvaluations,
+          activeExams: data.activeExams,
+        });
+      } else {
+        console.error('Invalid dashboard stats response:', data);
+        setDashboardStats({ courses: 0, pendingEvaluations: 0, activeExams: 0 });
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard stats:', error);
+      setDashboardStats({ courses: 0, pendingEvaluations: 0, activeExams: 0 });
+    }
+  };
+
+  const fetchTABatchInfo = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !user.isTA) return;
+    try {
+      const res = await fetch('http://localhost:5000/api/ta/my-batches', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (res.ok && data) {
+        // Ensure taBatchInfo is always an array
+        setTaBatchInfo(Array.isArray(data) ? data : [data]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch TA batch info:", error);
+    }
+  };
+
+  const fetchEvaluations = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    let url = 'http://localhost:5000/api/student/evaluations';
+
+    try {
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+
+      if (Array.isArray(data)) {
+        setEvaluations(data);
+
+        // Extract unique exams from evaluations
+        const uniqueExams = data.reduce((acc, evaluation) => {
+          if (!acc.some(exam => exam.examId === evaluation.examId)) {
+            acc.push({ examId: evaluation.examId, name: evaluation.examName, courseName: evaluation.courseName, batchName: evaluation.batchId });
+          }
+          return acc;
+        }, []);
+
+        setEvaluationExams(uniqueExams); // Update dropdown options with unique exams
+      } else {
+        setEvaluations([]);
+        setEvaluationExams([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch evaluations:', error);
+      setEvaluations([]);
+      setEvaluationExams([]);
+    }
+  };
+
   const handleEnrollmentRequest = async (e) => {
     e.preventDefault();
     // console.log('Enrollment request:', selectedCourse, selectedBatch);
@@ -299,6 +299,70 @@ export default function StudentDashboard() {
     setExamFileMap(prev => ({ ...prev, [examId]: null }));
     if (fileInputRefs.current[examId]) {
       fileInputRefs.current[examId].value = "";
+    }
+  };
+
+  const handleEvaluateClick = (evaluation) => {
+    setSelectedEvaluation(evaluation);
+    setIsOverlayOpen(true);
+  };
+
+  const closeEvalOverlay = () => {
+    setIsOverlayOpen(false);
+    setSelectedEvaluation(null);
+  };
+
+  const handleEvaluationSubmit = async (e, selectedEvaluation) => {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+
+    const marks = [];
+    const feedback = [];
+
+    Array.from(e.target.elements).forEach((element) => {
+      if (element.type === "number" && element.placeholder === "Marks") {
+        marks.push(Number(element.value));
+      }
+      if (element.type === "text" && element.placeholder === "Feedback") {
+        feedback.push(element.value);
+      }
+    });
+
+    const totalMarks = marks.reduce((sum, mark) => sum + mark, 0);
+
+    if (totalMarks > selectedEvaluation.examTotalMarks) {
+      showMessage(`The total marks ${totalMarks} exceed the allowed maximum ${selectedEvaluation.examTotalMarks} marks. Please check the marks.`, "error");
+      return;
+    }
+
+    const evaluationData = {
+      evaluationId: selectedEvaluation.evaluationId,
+      examId: selectedEvaluation?.examId,
+      marks,
+      feedback,
+    };
+
+    try {
+      const response = await fetch("http://localhost:5000/api/student/submit-evaluation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(evaluationData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage(data.message || "Evaluation submitted successfully!", "success");
+        closeEvalOverlay();
+        fetchEvaluations();
+      } else {
+        showMessage(data.message || "Failed to submit evaluation!", "error");
+      }
+    } catch (error) {
+      showMessage("Error submitting evaluation!", "error");
     }
   };
 
@@ -530,6 +594,11 @@ export default function StudentDashboard() {
                 evaluationExams={evaluationExams}
                 selectedExam={selectedExam}
                 setSelectedExam={setSelectedExam}
+                isOverlayOpen={isOverlayOpen}
+                selectedEvaluation={selectedEvaluation}
+                handleEvaluateClick={handleEvaluateClick}
+                closeEvalOverlay={closeEvalOverlay}
+                handleEvaluationSubmit={handleEvaluationSubmit}
               />
             </div>
           )}
