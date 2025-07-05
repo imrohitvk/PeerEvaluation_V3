@@ -6,6 +6,7 @@ import EnrolledCoursesSection from '../components/Student/EnrolledCoursesSection
 import EnrollmentRequestSection from '../components/Student/EnrollmentRequestSection';
 import StudentExamsTab from '../components/Student/StudentExamsTab';
 import EvaluationsTable from '../components/Student/EvaluationTable';
+import TAPanel from '../components/TA/TAPanel';
 import { containerStyle, sidebarStyle, mainStyle, contentStyle, sidebarToggleBtnStyle, buttonStyle, sectionHeading } from '../styles/Student/StudentDashboard.js'
 import { FaBook, FaClipboardList, FaLaptopCode } from 'react-icons/fa';
 import { showMessage } from '../utils/Message';
@@ -31,6 +32,10 @@ export default function StudentDashboard() {
   const [evaluations, setEvaluations] = useState([]);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [selectedEvaluation, setSelectedEvaluation] = useState(null);
+  const [showTAManageOverlay, setShowTAManageOverlay] = useState(false);
+  const [manageTAData, setManageTAData] = useState(null);
+  const [pendingEnrollments, setPendingEnrollments] = useState([]);
+  const [flaggedEvaluations, setFlaggedEvaluations] = useState([]);
   const fileInputRefs = useRef({});
   const navigate = useNavigate();
 
@@ -366,6 +371,117 @@ export default function StudentDashboard() {
     }
   };
 
+  const handleTAManageClick = async (assignment) => {
+    setManageTAData(assignment);
+    setShowTAManageOverlay(true);
+    // console.log("Assignment clicked:", assignment);
+    const enrollmentsData = await fetchTAPendingEnrollments(assignment.batch_id);
+    setPendingEnrollments(enrollmentsData);
+    // const evaluationsData = await fetchTAFlaggedEvaluations(assignment.batch_id);
+    // setFlaggedEvaluations(evaluationsData);
+  };
+
+  const closeTAManageOverlay = () => {
+    setShowTAManageOverlay(false);
+    setManageTAData(null);
+    setPendingEnrollments([]);
+    setFlaggedEvaluations([]);
+  };
+
+  const fetchTAPendingEnrollments = async (batchId) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/ta/pending_enrollments/${batchId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const data = await res.json();
+      if (res.ok && data) {
+        return Array.isArray(data) ? data : [data];
+      }
+    } catch (error) {
+      console.error("Failed to fetch pending enrollments:", error);
+    }
+    return [];
+  };
+
+  const fetchTAFlaggedEvaluations = async (batchId) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/ta/evaluations/${batchId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const data = await res.json();
+      if (res.ok && data) {
+        return Array.isArray(data) ? data : [data];
+      }
+    } catch (error) {
+      console.error("Failed to fetch flagged evaluations:", error);
+    }
+    return [];
+  };
+
+  const acceptEnrollment = async (enrollmentId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `http://localhost:5000/api/ta/accept/${enrollmentId}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        showMessage(data.message, "success");
+        const updatedEnrollments = await fetchTAPendingEnrollments(manageTAData.batch_id);
+        setPendingEnrollments(updatedEnrollments);
+      } else {
+        showMessage(data.message || "Failed to accept enrollment.", "error");
+      }
+    } catch (error) {
+      showMessage(error.message, "error");
+    }
+  };
+
+  const declineEnrollment = async (enrollmentId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `http://localhost:5000/api/ta/decline/${enrollmentId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        showMessage(data.message, "success");
+        const updatedEnrollments = await fetchTAPendingEnrollments(manageTAData.batch_id);
+        setPendingEnrollments(updatedEnrollments);
+      }
+    } catch (error) {
+      showMessage(error.message, "error");
+    }
+  };
+
   const handleSidebarToggle = () => setSidebarOpen(open => !open);
 
   return (
@@ -604,69 +720,20 @@ export default function StudentDashboard() {
           )}
 
           {activeTab === 'ta' && user.isTA && (
-            <div style={{ display: 'flex', flexDirection: 'column', color: '#2d3559', width: '100%' }}>
-              <div style={{ alignItems: 'center' }}>
-                <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>TA Panel</h2>
-              </div>
-              {/* Filter Dropdown */}
-              <div style={{ marginBottom: '1rem', alignItems: 'left', width: '100%' }}>
-                <label style={{ fontSize: '1rem', fontWeight: 500, textAlign: 'left' }}>Filter by Batch/Course: </label>
-                <select
-                  value={selectedTABatch || ''}
-                  onChange={e => setSelectedTABatch(e.target.value)}
-                  style={{
-                    minWidth: 180,
-                    padding: '0.6rem 1.2rem',
-                    borderRadius: '8px',
-                    border: '1.5px solid #4b3c70',
-                    fontSize: '1rem',
-                    background: '#fff',
-                    color: '#000',
-                    fontWeight: 500,
-                    transition: 'background 0.2s',
-                    outline: 'none',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="">All Batches</option>
-                  {taBatchInfo && taBatchInfo.map((assignment, idx) => (
-                    <option key={idx} value={assignment.batchId}>
-                      {assignment.courseName} - {assignment.batchId}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {/* Table */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #4b3c70' }}>
-                <thead style={{ backgroundColor: '#4b3c70', color: '#ffffff', position: 'sticky', top: 0, zIndex: 1 }}>
-                  <tr>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Course Name</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Course ID</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Batch ID</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Instructor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {taBatchInfo && taBatchInfo.length > 0 ? (
-                    (selectedTABatch
-                      ? taBatchInfo.filter(a => a.batchId === selectedTABatch)
-                      : taBatchInfo
-                    ).map((assignment, idx) => (
-                      <tr key={idx}>
-                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{assignment.courseName}</td>
-                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{assignment.courseId}</td>
-                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{assignment.batchId}</td>
-                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{assignment.instructorName}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={4} style={{ textAlign: 'center', padding: '1rem' }}>Loading your assigned TA batch info...</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <TAPanel
+              taBatchInfo={taBatchInfo}
+              selectedTABatch={selectedTABatch}
+              setSelectedTABatch={setSelectedTABatch}
+              sectionHeading={sectionHeading}
+              handleTAManageClick={handleTAManageClick}
+              showTAManageOverlay={showTAManageOverlay}
+              closeTAManageOverlay={closeTAManageOverlay}
+              manageTAData={manageTAData}
+              pendingEnrollments={pendingEnrollments}
+              flaggedEvaluations={flaggedEvaluations}
+              acceptEnrollment={acceptEnrollment}
+              declineEnrollment={declineEnrollment}
+            />
           )}
 
         </div>

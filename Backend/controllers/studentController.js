@@ -116,14 +116,17 @@ export const requestEnrollment = async (req, res) => {
       student: studentId,
       batch: batchId,
       course: courseId,
-      status: { $in: ['pending', 'active'] }
+      status: { $in: ['pending', 'active', 'dropped'] }
     });
 
     if (existingEnrollment && existingEnrollment.status === 'active') {
-      return res.status(400).json({ message: 'Already enrolled in this course!' });
+      return res.status(400).json({ message: 'Already enrolled in this batch!' });
     }
     else if (existingEnrollment && existingEnrollment.status === 'pending') {
-      return res.status(400).json({ message: 'You have a pending enrollment request for this course!' });
+      return res.status(400).json({ message: 'You have a pending enrollment request for this batch!' });
+    }
+    else if (existingEnrollment && existingEnrollment.status === 'dropped') {
+      return res.status(400).json({ message: 'You have been dropped from this batch!' });
     }
 
     const newEnrollment = new Enrollment({
