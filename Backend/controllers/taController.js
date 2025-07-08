@@ -122,7 +122,8 @@ export const getFlaggedEvaluations = async (req, res) => {
     const evaluations = await PeerEvaluation.find({
       exam: { $in: examIds },
       $or: [{ eval_status: "pending" }, { eval_status: "completed", ticket: 1 }],
-    }).populate("exam")
+    }).populate("document")
+    .populate("exam")
     .populate("evaluator")
     .populate("student");
 
@@ -139,5 +140,27 @@ export const getFlaggedEvaluations = async (req, res) => {
   } catch (error) {
     console.error("Error fetching flagged evaluations:", error);
     res.status(500).json({ error: "Failed to fetch flagged evaluations." });
+  }
+};
+
+export const updateFlaggedEvaluation = async (req, res) => {
+  try {
+    const { evaluationId } = req.params;
+    const updateData = req.body;
+
+    const updatedEvaluation = await PeerEvaluation.findByIdAndUpdate(
+      evaluationId, 
+      { ...updateData, ticket: 0, eval_status: "completed" }, 
+      { new: true }
+    );
+    
+    if (!updatedEvaluation) {
+      return res.status(404).json({ message: "Evaluation not found!" });
+    }
+    
+    res.status(200).json({ message: "Evaluation updated successfully!" });
+  } catch (error) {
+    console.error("Error updating flagged evaluation:", error);
+    res.status(500).json({ message: "Failed to update flagged evaluation!" });
   }
 };
