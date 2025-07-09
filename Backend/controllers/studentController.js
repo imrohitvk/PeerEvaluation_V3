@@ -363,6 +363,7 @@ export const submitEvaluation = async (req, res) => {
     evaluation.feedback = feedback;
     evaluation.evaluated_on = new Date();
     evaluation.eval_status = 'completed';
+    evaluation.evaluated_by = req.user._id;
 
     await evaluation.save();
 
