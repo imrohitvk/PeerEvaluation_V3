@@ -6,6 +6,8 @@ import EnrolledCoursesSection from '../components/Student/EnrolledCoursesSection
 import EnrollmentRequestSection from '../components/Student/EnrollmentRequestSection';
 import StudentExamsTab from '../components/Student/StudentExamsTab';
 import EvaluationsTable from '../components/Student/EvaluationTable';
+import ResultsTable from '../components/Student/ResultsTable';
+import PeerResultOverlay from '../components/Student/PeerResultOverlay';
 import TAPanel from '../components/TA/TAPanel';
 import TAEvalOverlay from '../components/TA/TAEvalOverlay';
 import { containerStyle, sidebarStyle, mainStyle, contentStyle, sidebarToggleBtnStyle, buttonStyle, sectionHeading } from '../styles/Student/StudentDashboard.js'
@@ -40,6 +42,12 @@ export default function StudentDashboard() {
   const [selectedTAExam, setSelectedTAExam] = useState("");
   const [showTAEvalOverlay, setShowTAEvalOverlay] = useState(false);
   const [selectedTAEvaluation, setSelectedTAEvaluation] = useState(null);
+  const [resultsBatches, setResultsBatches] = useState([]);
+  const [selectedResultsBatch, setSelectedResultsBatch] = useState("");
+  const [resultExams, setResultExams] = useState([]);
+  const [isPeerResultOverlayOpen, setIsPeerResultOverlayOpen] = useState(false);
+  const [selectedExamForPeerResult, setSelectedExamForPeerResult] = useState(null);
+  const [peerResultsForExam, setPeerResultsForExam] = useState([]);
   const fileInputRefs = useRef({});
   const navigate = useNavigate();
 
@@ -158,6 +166,18 @@ export default function StudentDashboard() {
     fetchEvaluations();
   }, [activeTab]);
 
+  useEffect(() => {
+    if (activeTab === 'result') {
+      fetchResultsBatches();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (selectedResultsBatch) {
+      fetchResultExams();
+    }
+  }, [selectedResultsBatch]);
+
   const fetchDashboardStats = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -242,6 +262,38 @@ export default function StudentDashboard() {
       console.error('Failed to fetch evaluations:', error);
       setEvaluations([]);
       setEvaluationExams([]);
+    }
+  };
+
+  const fetchResultsBatches = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const response = await fetch('http://localhost:5000/api/student/results-batches', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setResultsBatches(data);
+      }
+    } catch (error) {
+      showMessage(error.message, 'error');
+    }
+  };
+
+  const fetchResultExams = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !selectedResultsBatch) return;
+    try {
+      const response = await fetch(`http://localhost:5000/api/student/result-batch-exams/${selectedResultsBatch}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setResultExams(data);
+      }
+    } catch (error) {
+      showMessage(error.message, 'error');
     }
   };
 
@@ -590,6 +642,31 @@ export default function StudentDashboard() {
     }
   };
 
+  const handleViewPeerResults = async (exam) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const response = await fetch(`http://localhost:5000/api/student/peer-result-evals/${exam._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+
+      if (Array.isArray(data)) {
+        setPeerResultsForExam(data);
+        setSelectedExamForPeerResult(exam);
+        setIsPeerResultOverlayOpen(true);
+      }
+    } catch (error) {
+      showMessage(error.message, 'error');
+    }
+  };
+
+  const closePeerResultOverlay = () => {
+    setIsPeerResultOverlayOpen(false);
+    setSelectedExamForPeerResult(null);
+    setPeerResultsForExam([]);
+  };
+
   const handleSidebarToggle = () => setSidebarOpen(open => !open);
 
   return (
@@ -672,6 +749,7 @@ export default function StudentDashboard() {
             <button onClick={() => setActiveTab('course')} style={buttonStyle(activeTab === 'course')}>📚 Courses & Enrollment</button>
             <button onClick={() => setActiveTab('exam')} style={buttonStyle(activeTab === 'exam')}>📋 Exams</button>
             <button onClick={() => setActiveTab('evaluation')} style={buttonStyle(activeTab === 'evaluation')}>📝 Evaluations</button>
+            <button onClick={() => setActiveTab('result')} style={buttonStyle(activeTab === 'result')}>📊 Results</button>
             {user.isTA && (
               <button onClick={() => setActiveTab('ta')} style={buttonStyle(activeTab === 'ta')}>🧑‍🏫 TA Panel</button>
             )}
@@ -827,6 +905,19 @@ export default function StudentDashboard() {
             </div>
           )}
 
+          {activeTab === 'result' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#2d3559', width: '100%' }}>
+              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', color: '#3f3d56' }}>Results</h2>
+              <ResultsTable
+                resultBatches={resultsBatches}
+                selectedResultBatch={selectedResultsBatch}
+                setSelectedResultBatch={setSelectedResultsBatch}
+                resultExams={resultExams}
+                handleViewPeerResults={handleViewPeerResults}
+              />
+            </div>
+          )}
+
           {activeTab === 'ta' && user.isTA && (
             <TAPanel
               taBatchInfo={taBatchInfo}
@@ -859,6 +950,12 @@ export default function StudentDashboard() {
           handleTAEvaluationUpdate={handleTAEvaluationUpdate}
         />
       )}
+      <PeerResultOverlay
+        isPeerResultOverlayOpen={isPeerResultOverlayOpen}
+        closePeerResultOverlay={closePeerResultOverlay}
+        selectedExamForPeerResult={selectedExamForPeerResult}
+        peerResultsForExam={peerResultsForExam}
+      />
     </div>
   );
 }
