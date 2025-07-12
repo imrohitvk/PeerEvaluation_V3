@@ -1,11 +1,15 @@
 import React from "react";
-import { FaTimes } from "react-icons/fa";
+import { showRaiseTicketDialog } from "./messageDialogs";
+import { FaTimes, FaFileAlt, FaExclamationTriangle } from "react-icons/fa";
 
 const PeerResultOverlay = ({ 
   isPeerResultOverlayOpen, 
   closePeerResultOverlay, 
   selectedExamForPeerResult, 
-  peerResultsForExam 
+  peerResultsForExam,
+  loadingTickets,
+  setLoadingTickets,
+  handleRaiseTicket
 }) => {
   if (!isPeerResultOverlayOpen) return null;
 
@@ -24,6 +28,39 @@ const PeerResultOverlay = ({
     }, 0);
     
     return (totalScore / completedEvaluations.length).toFixed(2);
+  };
+
+  const getDocumentUrl = () => {
+    if (peerResultsForExam.length > 0 && peerResultsForExam[0].document) {
+      const doc = peerResultsForExam[0].document;
+      // Adjust this URL based on your backend setup
+      return `http://localhost:5000/${doc.documentPath}`;
+    }
+    return null;
+  };
+
+  const documentUrl = getDocumentUrl();
+
+  const handleViewDocument = () => {
+    if (documentUrl) {
+      window.open(documentUrl, '_blank');
+    }
+  };
+
+  const handleRaiseTicketClick = async (evaluationId) => {
+    const confirmRaise = await showRaiseTicketDialog();
+    
+    if (!confirmRaise) return;
+
+    setLoadingTickets(prev => ({ ...prev, [evaluationId]: true }));
+    
+    try {
+      await handleRaiseTicket(evaluationId);
+    } catch (error) {
+      console.error('Error in raise ticket:', error);
+    } finally {
+      setLoadingTickets(prev => ({ ...prev, [evaluationId]: false }));
+    }
   };
 
   return (
@@ -78,6 +115,34 @@ const PeerResultOverlay = ({
         >
           <FaTimes style={{ fontSize: "1rem" }} />
         </button>
+
+        <button
+            onClick={handleViewDocument}
+            style={{
+              position: "absolute",
+              top: "1rem",
+              left: "1rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              background: "#4b3c70",
+              border: "none",
+              color: "#fff",
+              padding: "0.8rem 1rem",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "0.9rem",
+              fontWeight: 500,
+              transition: "background 0.2s",
+              zIndex: 10,
+            }}
+            onMouseEnter={(e) => e.target.style.background = "#3a2d5c"}
+            onMouseLeave={(e) => e.target.style.background = "#4b3c70"}
+            title="View Your Submitted File"
+          >
+            <FaFileAlt style={{ fontSize: "1.1rem" }} />
+            View Document
+          </button>
 
         {/* Header Section */}
         <div
@@ -205,6 +270,53 @@ const PeerResultOverlay = ({
                           : result.score || 0}
                       </td>
                       <td style={{ ...tdCellStyle }}>
+                        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
+                          {result.ticket === 1 ? (
+                            <span style={{
+                              padding: "0.3rem 0.6rem",
+                              borderRadius: "12px",
+                              fontSize: "0.75rem",
+                              fontWeight: 600,
+                              backgroundColor: "#fff3cd",
+                              color: "#856404",
+                              border: "1px solid #ffeaa7"
+                            }}>
+                              Ticket Raised
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleRaiseTicketClick(result._id)}
+                              disabled={loadingTickets[result._id]}
+                              style={{
+                                background: "#ff6b6b",
+                                border: "none",
+                                color: "#fff",
+                                padding: "0.4rem 0.6rem",
+                                borderRadius: "4px",
+                                cursor: loadingTickets[result._id] ? "not-allowed" : "pointer",
+                                fontSize: "0.75rem",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.3rem",
+                                opacity: loadingTickets[result._id] ? 0.6 : 1,
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!loadingTickets[result._id]) {
+                                  e.target.style.background = "#ff5252";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!loadingTickets[result._id]) {
+                                  e.target.style.background = "#ff6b6b";
+                                }
+                              }}
+                              title="Raise a ticket for this evaluation"
+                            >
+                              <FaExclamationTriangle />
+                              {loadingTickets[result._id] ? "Raising..." : "Raise Ticket"}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))

@@ -412,7 +412,8 @@ export const getResultsBatchExams = async (req, res) => {
     const exams = await Examination.find({ 
       batch: batchId, 
       evaluations_sent: true,
-      flags: true
+      flags: true,
+      completed: false
     });
     
     res.json(exams);
@@ -437,5 +438,32 @@ export const getPeerResultsEvaluations = async (req, res) => {
     res.json(peerEvaluations);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch peer evaluations.' });
+  }
+};
+
+export const raiseTicket = async (req, res) => {
+  try {
+    const { evaluationId } = req.params;
+    console.log('Raising ticket for evaluation:', evaluationId);
+
+    const evaluation = await PeerEvaluation.findById(evaluationId);
+    if (!evaluation) {
+      return res.status(404).json({ message: 'Evaluation not found!' });
+    }
+
+    if (evaluation.ticket === 1) {
+      return res.status(400).json({ message: 'Ticket already raised for this evaluation!' });
+    }
+
+    evaluation.ticket = 1;
+    // evaluation.ticketRaisedBy = userId;
+    // evaluation.ticketRaisedOn = new Date();
+    
+    await evaluation.save();
+
+    res.status(200).json({ message: 'Ticket raised successfully!' });
+  } catch (error) {
+    console.error('Error raising ticket:', error);
+    res.status(500).json({ message: 'Failed to raise ticket.' });
   }
 };

@@ -48,6 +48,7 @@ export default function StudentDashboard() {
   const [isPeerResultOverlayOpen, setIsPeerResultOverlayOpen] = useState(false);
   const [selectedExamForPeerResult, setSelectedExamForPeerResult] = useState(null);
   const [peerResultsForExam, setPeerResultsForExam] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState({});
   const fileInputRefs = useRef({});
   const navigate = useNavigate();
 
@@ -667,6 +668,33 @@ export default function StudentDashboard() {
     setPeerResultsForExam([]);
   };
 
+  const handleRaiseTicket = async (evaluationId) => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log("Raising ticket for evaluation ID:", evaluationId);
+      const response = await fetch(`http://localhost:5000/api/student/raise-ticket/${evaluationId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showMessage('Ticket raised successfully!', 'success');
+        if (selectedExamForPeerResult) {
+          handleViewPeerResults(selectedExamForPeerResult);
+        }
+      } else {
+        showMessage(data.message || 'Failed to raise ticket!', 'error');
+      }
+    } catch (error) {
+      showMessage('Failed to raise ticket!', 'error');
+    }
+  };
+
   const handleSidebarToggle = () => setSidebarOpen(open => !open);
 
   return (
@@ -955,6 +983,9 @@ export default function StudentDashboard() {
         closePeerResultOverlay={closePeerResultOverlay}
         selectedExamForPeerResult={selectedExamForPeerResult}
         peerResultsForExam={peerResultsForExam}
+        loadingTickets={loadingTickets}
+        setLoadingTickets={setLoadingTickets}
+        handleRaiseTicket={handleRaiseTicket}
       />
     </div>
   );
