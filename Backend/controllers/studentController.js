@@ -7,6 +7,7 @@ import { Course } from '../models/Course.js';
 import { UIDMap } from '../models/UIDMap.js';
 import { PeerEvaluation } from '../models/PeerEvaluation.js';
 import { TA } from '../models/TA.js';
+import { Ticket } from '../models/Ticket.js';
 import fs from 'fs';
 
 export const getStudentDashboardStats = async (req, res) => {
@@ -432,10 +433,30 @@ export const getPeerResultsEvaluations = async (req, res) => {
       student: userId
     }).populate('document')
     .populate('evaluator')
-    .populate('student');
-  
-    console.log('Peer Evaluations:', peerEvaluations);
-    res.json(peerEvaluations);
+    .populate('student')
+    .populate('evaluated_by');
+
+    const evaluationIds = peerEvaluations.map(evaluation => evaluation._id);
+
+    const tickets = await Ticket.find({ evaluation: { $in: evaluationIds } });
+
+    const ticketMap = {};
+    tickets.forEach(ticket => {
+      ticketMap[ticket.evaluation.toString()] = ticket;
+    });
+
+    const evaluationsWithTickets = peerEvaluations.map(evaluation => {
+      const evalObj = evaluation.toObject();
+      const userTicket = ticketMap[evaluation._id.toString()];
+      
+      evalObj.userHasRaisedTicket = !!userTicket;
+      evalObj.userTicket = userTicket || null;
+      
+      return evalObj;
+    });
+
+    console.log('Peer evaluations with tickets:', evaluationsWithTickets);
+    res.json(evaluationsWithTickets);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch peer evaluations.' });
   }
@@ -444,7 +465,7 @@ export const getPeerResultsEvaluations = async (req, res) => {
 export const raiseTicket = async (req, res) => {
   try {
     const { evaluationId } = req.params;
-    console.log('Raising ticket for evaluation:', evaluationId);
+    const userId = req.user._id;
 
     const evaluation = await PeerEvaluation.findById(evaluationId);
     if (!evaluation) {
@@ -455,15 +476,28 @@ export const raiseTicket = async (req, res) => {
       return res.status(400).json({ message: 'Ticket already raised for this evaluation!' });
     }
 
-    evaluation.ticket = 1;
-    // evaluation.ticketRaisedBy = userId;
-    // evaluation.ticketRaisedOn = new Date();
+    const existingTicket = await Ticket.findOne({
+      evaluation: evaluationId,
+      raisedBy: userId
+    });
+
+    if (existingTicket) {
+      return res.status(409).json({ message: 'You have already raised a ticket for this evaluation and has been resolved!' }); 
+    }
+
+    const newTicket = new Ticket({
+      evaluation: evaluationId,
+      evaluatedBy: evaluation.evaluated_by || evaluation.evaluator,
+      raisedBy: userId
+    });
     
+    await newTicket.save();
+    
+    evaluation.ticket = 1;    
     await evaluation.save();
 
     res.status(200).json({ message: 'Ticket raised successfully!' });
   } catch (error) {
-    console.error('Error raising ticket:', error);
     res.status(500).json({ message: 'Failed to raise ticket.' });
   }
 };

@@ -671,7 +671,6 @@ export default function StudentDashboard() {
   const handleRaiseTicket = async (evaluationId) => {
     try {
       const token = localStorage.getItem('token');
-      console.log("Raising ticket for evaluation ID:", evaluationId);
       const response = await fetch(`http://localhost:5000/api/student/raise-ticket/${evaluationId}`, {
         method: 'PUT',
         headers: {
@@ -683,12 +682,14 @@ export default function StudentDashboard() {
       const data = await response.json();
       
       if (response.ok) {
-        showMessage('Ticket raised successfully!', 'success');
+        showMessage(data.message, 'success');
         if (selectedExamForPeerResult) {
           handleViewPeerResults(selectedExamForPeerResult);
         }
+      } else if (response.status === 409) {
+        showMessage(data.message, 'info');
       } else {
-        showMessage(data.message || 'Failed to raise ticket!', 'error');
+        showMessage(data.message, 'error');
       }
     } catch (error) {
       showMessage('Failed to raise ticket!', 'error');
