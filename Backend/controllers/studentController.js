@@ -455,7 +455,6 @@ export const getPeerResultsEvaluations = async (req, res) => {
       return evalObj;
     });
 
-    console.log('Peer evaluations with tickets:', evaluationsWithTickets);
     res.json(evaluationsWithTickets);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch peer evaluations.' });
