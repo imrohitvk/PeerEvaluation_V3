@@ -13,6 +13,7 @@ import ExamList from '../components/Teacher/ExamList.jsx';
 import { showSendEvaluationDialog, showFlagEvaluationsDialog, showMarkAsDoneDialog, showDeleteExamDialog } from '../components/Teacher/messageDialogs.jsx';
 import BulkUploadOverlay from '../components/Teacher/BulkUploadOverlay.jsx';
 import FlaggedEvaluationsOverlay from '../components/Teacher/FlaggedEvaluationsOverlay.jsx';
+import TeacherEditEvalOverlay from '../components/Teacher/TeacherEditEvalOverlay.jsx';
 
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState('home');
@@ -23,10 +24,10 @@ export default function TeacherDashboard() {
   const [filteredBatches, setFilteredBatches] = useState([]);
   const [selectedBatchId, setSelectedBatchId] = useState('');
   const [examOverlayOpen, setExamOverlayOpen] = useState(false);
-  const [enrollOverlayOpen, setEnrollOverlayOpen] = useState(false); // State for enroll students overlay
+  const [enrollOverlayOpen, setEnrollOverlayOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedBatch, setSelectedBatch] = useState(null);
-  const [exams, setExams] = useState([]); // State to manage exams
+  const [exams, setExams] = useState([]);
   const navigate = useNavigate();
   const [isEditExamOverlayOpen, setEditExamOverlayOpen] = useState(false);
   const [selectedExam, setSelectedExam] = useState(null);
@@ -34,6 +35,8 @@ export default function TeacherDashboard() {
   const [selectedExamForBulkUpload, setSelectedExamForBulkUpload] = useState(null);
   const [flaggedEvaluationsOverlayOpen, setFlaggedEvaluationsOverlayOpen] = useState(false);
   const [flaggedEvaluationsForOverlay, setFlaggedEvaluationsForOverlay] = useState([]);
+  const [editEvaluationOverlayOpen, setEditEvaluationOverlayOpen] = useState(false);
+  const [selectedEvaluation, setSelectedEvaluation] = useState(null);
   const { setRefreshApp } = useContext(AppContext);
 
   useEffect(() => {
@@ -540,7 +543,6 @@ export default function TeacherDashboard() {
     }
   };
 
-  // Implement handle viewing evaluations for an exam
   const handleViewEvaluations = async (examId) => {
     try {
       const token = localStorage.getItem('token');
@@ -557,6 +559,69 @@ export default function TeacherDashboard() {
       }
     } catch (error) {
       showMessage('Failed to fetch flagged evaluations.', 'error');
+    }
+  };
+
+  const handleEditEvaluationOverlayOpen = (evaluation) => {
+    setSelectedEvaluation(evaluation);
+    setEditEvaluationOverlayOpen(true);
+  };
+
+  const handleEditEvaluationOverlayClose = () => {
+    setEditEvaluationOverlayOpen(false);
+    setSelectedEvaluation(null);
+  };
+
+  const handleEvaluationUpdate = async (updateData) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/teacher/update-evaluation/${updateData.evaluationId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            score: updateData.score,
+            feedback: updateData.feedback,
+            ticket: updateData.ticket || 0,
+          }),
+        }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        showMessage(data.message, 'success');
+        handleEditEvaluationOverlayClose();
+        handleViewEvaluations(updateData.exam);
+      } else {
+        showMessage(data.message || 'Failed to update evaluation.', 'error');
+      }
+    } catch (error) {
+      showMessage(error.message || 'An error occurred while updating evaluation!', 'error');
+    }
+  };
+
+  const handleEvaluationFlagRemove = async (evaluation, examId) => {
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`http://localhost:5000/api/teacher/remove-ticket/${evaluation}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        showMessage(data.message, 'success');
+        handleViewEvaluations(examId);
+      } else {
+        showMessage(data.message || 'Failed to remove flag from evaluation.', 'error');
+      }
+    } catch (error) {
+      showMessage('An error occurred while removing flag from evaluation.', 'error');
     }
   };
 
@@ -982,7 +1047,7 @@ export default function TeacherDashboard() {
         onSubmit={handleEnrollStudents}
         course={selectedCourse}
         batch={selectedBatch}
-        closeOnOutsideClick={true} // Added prop to enable closing on outside click
+        closeOnOutsideClick={true}
       />
 
       {/* EditExamOverlay */}
@@ -997,9 +1062,9 @@ export default function TeacherDashboard() {
 
       {bulkUploadOverlayOpen && (
         <BulkUploadOverlay
-          examId={selectedExamForBulkUpload} // Pass the selected exam ID
-          onClose={handleBulkUploadOverlayClose} // Close handler
-          onUpload={handleBulkUpload} // Upload handler
+          examId={selectedExamForBulkUpload} 
+          onClose={handleBulkUploadOverlayClose} 
+          onUpload={handleBulkUpload} 
         />
       )}
 
@@ -1008,6 +1073,17 @@ export default function TeacherDashboard() {
           flaggedEvaluationsOverlayOpen={flaggedEvaluationsOverlayOpen}
           flaggedEvaluationsOverlayClose={() => setFlaggedEvaluationsOverlayOpen(false)}
           flaggedEvaluations={flaggedEvaluationsForOverlay}
+          handleEditEvaluationOverlayOpen={handleEditEvaluationOverlayOpen}
+          handleEvaluationFlagRemove={handleEvaluationFlagRemove}
+        />
+      )}
+
+      {editEvaluationOverlayOpen && selectedEvaluation && (
+        <TeacherEditEvalOverlay
+          isEditOverlayOpen={editEvaluationOverlayOpen}
+          selectedEvaluation={selectedEvaluation}
+          closeEditOverlay={handleEditEvaluationOverlayClose}
+          handleEvaluationUpdate={handleEvaluationUpdate}
         />
       )}
     </div>
