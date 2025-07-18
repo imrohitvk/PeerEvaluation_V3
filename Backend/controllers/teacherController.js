@@ -870,3 +870,48 @@ export const removeTicket = async (req, res) => {
     res.status(500).json({ message: 'Failed to remove ticket!' });
   }
 };
+
+export const downloadResultsCSV = async (req, res) => {
+  const { examId } = req.params;
+
+  try {
+    const evaluations = await PeerEvaluation.find({ exam: examId, eval_status: 'completed' }).populate('student');
+
+    const studentTotals = {};
+    evaluations.forEach(ev => {
+      const studentId = ev.student?._id?.toString();
+      if (!studentId) return;
+
+      let totalMarks = 0;
+      if (Array.isArray(ev.score)) {
+        totalMarks = ev.score.reduce((a, b) => a + b, 0);
+      } else if (typeof ev.score === 'number') {
+        totalMarks = ev.score;
+      }
+
+      if (!studentTotals[studentId]) {
+        studentTotals[studentId] = {
+          name: ev.student.name,
+          email: ev.student.email,
+          totals: [],
+        };
+      }
+      studentTotals[studentId].totals.push(totalMarks);
+    });
+
+    const csvData = Object.values(studentTotals).map(entry => ({
+      Name: entry.name,
+      Email: entry.email,
+      Avg_Score: (entry.totals.reduce((a, b) => a + b, 0) / entry.totals.length).toFixed(2),
+    }));
+
+    const parser = new Parser({ fields: ['Name', 'Email', 'Avg_Score'] });
+    const csv = parser.parse(csvData);
+
+    res.header('Content-Type', 'text/csv');
+    res.attachment(`Exam_${examId}_results.csv`);
+    return res.send(csv);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to generate results CSV!' });
+  }
+};

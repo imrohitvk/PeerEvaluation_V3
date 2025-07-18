@@ -14,6 +14,7 @@ import { showSendEvaluationDialog, showFlagEvaluationsDialog, showMarkAsDoneDial
 import BulkUploadOverlay from '../components/Teacher/BulkUploadOverlay.jsx';
 import FlaggedEvaluationsOverlay from '../components/Teacher/FlaggedEvaluationsOverlay.jsx';
 import TeacherEditEvalOverlay from '../components/Teacher/TeacherEditEvalOverlay.jsx';
+import ResultsOverlay from '../components/Teacher/ResultsOverlay.jsx';
 
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState('home');
@@ -37,6 +38,8 @@ export default function TeacherDashboard() {
   const [flaggedEvaluationsForOverlay, setFlaggedEvaluationsForOverlay] = useState([]);
   const [editEvaluationOverlayOpen, setEditEvaluationOverlayOpen] = useState(false);
   const [selectedEvaluation, setSelectedEvaluation] = useState(null);
+  const [resultsOverlayOpen, setResultsOverlayOpen] = useState(false);
+  const [selectedExamForResults, setSelectedExamForResults] = useState(null);
   const { setRefreshApp } = useContext(AppContext);
 
   useEffect(() => {
@@ -625,6 +628,32 @@ export default function TeacherDashboard() {
     }
   };
 
+  const handleViewResults = async (examId) => {
+    setSelectedExamForResults(examId);
+    setResultsOverlayOpen(true);
+  };
+
+  const handleDownloadResults = async (selectedExamForResults) => {
+    const token = localStorage.getItem("token");
+    await fetch(`http://localhost:5000/api/teacher/download-results-csv/${selectedExamForResults}`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    )
+      .then((res) => res.blob())
+      .then((blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `exam_${selectedExamForResults}_results.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      });
+  };
+
   return (
     <div
       className={`teacher-dashboard-bg${sidebarOpen ? ' sidebar-open' : ''}`}
@@ -1025,6 +1054,7 @@ export default function TeacherDashboard() {
                 handleMarkAsDone={handleMarkAsDone}
                 handleDeleteExam={handleDeleteExam}
                 handleViewEvaluations={handleViewEvaluations}
+                handleViewResults={handleViewResults}
               />
             </div>
           )}
@@ -1086,6 +1116,16 @@ export default function TeacherDashboard() {
           handleEvaluationUpdate={handleEvaluationUpdate}
         />
       )}
+
+      {resultsOverlayOpen && selectedExamForResults && (
+        <ResultsOverlay
+          resultsOverlayOpen={resultsOverlayOpen}
+          selectedExamForResults={selectedExamForResults}
+          resultsOverlayClose={() => setResultsOverlayOpen(false)}
+          handleDownloadResults={handleDownloadResults}
+        />
+      )}
+
     </div>
   );
 }
