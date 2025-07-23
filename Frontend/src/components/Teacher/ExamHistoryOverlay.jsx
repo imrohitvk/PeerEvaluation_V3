@@ -29,9 +29,9 @@ const ExamHistoryOverlay = ({ examHistoryOverlayOpen, examHistoryOverlayClose, c
           borderRadius: "16px",
           boxShadow: "0 4px 16px rgba(75,60,112,0.13)",
           width: "90%",
-          maxWidth: "700px",
-          minHeight: "300px",
-          maxHeight: "90vh",
+          maxWidth: "1100px",
+          minHeight: "400px",
+          maxHeight: "94vh",
           display: "flex",
           flexDirection: "column",
           gap: "2rem",
@@ -72,22 +72,25 @@ const ExamHistoryOverlay = ({ examHistoryOverlayOpen, examHistoryOverlayClose, c
 
         <div style={{
           background: "#f7f6fd",
-          borderRadius: "16px",
+          borderRadius: "18px",
           boxShadow: "0 4px 16px rgba(75,60,112,0.13)",
           padding: "1.5rem 1rem",
           margin: "0 auto",
           width: "100%",
-          maxWidth: "600px",
-          overflowX: "auto"
+          maxWidth: "1000px",
+          overflowX: "auto",
+          overflowY: "auto",
+          maxHeight: "60vh",
         }}>
           {completedExams.length === 0 ? (
             <div style={{ textAlign: "center", color: "#888" }}>No completed exams found.</div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "1.08rem" }}>
               <thead>
-                <tr style={{ background: "#ece9f7" }}>
+                <tr style={{ background: "#ece9f7", position: "sticky", top: 0 }}>
                   <th style={{ padding: "10px", fontWeight: 700 }}>Exam Name</th>
                   <th style={{ padding: "10px", fontWeight: 700 }}>Date</th>
+                  <th style={{ padding: "10px", fontWeight: 700 }}>Course</th>
                   <th style={{ padding: "10px", fontWeight: 700 }}>Batch</th>
                   <th style={{ padding: "10px", fontWeight: 700 }}>Total Marks</th>
                   <th style={{ padding: "10px", fontWeight: 700 }}>Actions</th>
@@ -99,6 +102,9 @@ const ExamHistoryOverlay = ({ examHistoryOverlayOpen, examHistoryOverlayClose, c
                     <td style={{ padding: "10px" }}>{exam.name || "-"}</td>
                     <td style={{ padding: "10px" }}>
                       {exam.date ? new Date(exam.date).toLocaleDateString() : "-"}
+                    </td>
+                    <td style={{ padding: "10px" }}>
+                      {exam.batch?.course?.courseName || "-"}
                     </td>
                     <td style={{ padding: "10px" }}>
                       {exam.batch?.batchId || "-"}

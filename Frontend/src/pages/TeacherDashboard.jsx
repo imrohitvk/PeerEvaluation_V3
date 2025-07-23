@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { data, useNavigate } from 'react-router-dom';
 import '../styles/Teacher/TeacherDashboard.css'; // Assuming you have a CSS file for styles
 import { containerStyle, sidebarStyle, mainStyle, contentStyle, sidebarToggleBtnStyle, buttonStyle, sectionHeading } from '../styles/Teacher/TeacherDashboard.js'; // Importing styles from JS file
 import { showMessage } from '../utils/Message'; // Assuming you have a utility for showing messages
@@ -676,6 +676,34 @@ export default function TeacherDashboard() {
       });
   };
 
+  const handleDownloadIncentives = async (batchId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:5000/api/teacher/download-incentives-csv/${batchId}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `batch_${batchId}_incentives.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        const errorData = await response.json();
+        showMessage(errorData.message, 'error');
+      }
+    } catch (error) {
+      console.error("Error downloading incentives:", error);
+      showMessage(error.message || 'Failed to download incentives!', 'error');
+    }
+  };
+
   return (
     <div
       className={`teacher-dashboard-bg${sidebarOpen ? ' sidebar-open' : ''}`}
@@ -977,6 +1005,21 @@ export default function TeacherDashboard() {
                               }}
                             >
                               Download List
+                            </button>
+                            <button
+                              style={{
+                                padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                backgroundColor: '#4b3c70',
+                                color: '#ffffff',
+                                border: 'none',
+                                fontSize: '0.95rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                              }}
+                              onClick={() => handleDownloadIncentives(batch.id)}
+                            >
+                              Incentives
                             </button>
                           </div>
                           
