@@ -9,6 +9,7 @@ import { TA } from '../models/TA.js';
 import { PeerEvaluation } from '../models/PeerEvaluation.js';
 import { Statistics } from '../models/Statistics.js';
 import { Incentivization } from '../models/Incentivization.js';
+import { calculateIncentivesForBatch } from '../utils/incentives.js';
 import csv from 'csv-parser';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
@@ -1061,83 +1062,48 @@ export const getCompletedExamsForTeacher = async (req, res) => {
   }
 };
 
-const calculateIncentivesForBatch = async (batchId, examId) => {
-  const PARTICIPATION_REWARD = 1;
-  const CORRECT_EVALUATION_REWARD = 5;
+// export const downloadIncentivesCSV = async (req, res) => {
+//   const { batchId } = req.params;
 
-  try {
-    const enrolledStudents = await Enrollment.find({ 
-      batch: batchId, 
-      status: 'active' 
-    }).populate('student');
+//   try {
+//     const incentives = await Incentivization.find({ batch: batchId })
+//       .populate('student', 'name email')
+//       .populate('batch', 'batchId');
 
-    const evaluations = await PeerEvaluation.find({ exam: examId })
-      .populate('student evaluator');
+//     if (!incentives.length) {
+//       return res.status(404).json({ message: 'No incentive data found for this batch!' });
+//     }
 
-    for (const enrollment of enrolledStudents) {
-      const studentId = enrollment.student._id;
-      
-      const studentParticipated = evaluations.some(evals => 
-        evals.student._id.toString() === studentId.toString()
-      );
+//     const csvData = incentives.map(incentive => ({
+//       Student_Name: incentive.student.name,
+//       Student_Email: incentive.student.email,
+//       Batch_ID: incentive.batch.batchId,
+//       Total_Rewards: incentive.total_rewards,
+//       Exams_Completed: incentive.exam_count,
+//       Total_Evaluations: incentive.total_evaluations,
+//       Correct_Evaluations: incentive.correct_evaluations,
+//       Accuracy_Percentage: incentive.total_evaluations > 0 ? 
+//         ((incentive.correct_evaluations / incentive.total_evaluations) * 100).toFixed(2) : 0,
+//       Last_Updated: incentive.last_updated.toLocaleDateString()
+//     }));
 
-      const evaluationsByStudent = evaluations.filter(evals => 
-        evals.evaluator && 
-        evals.evaluator._id.toString() === studentId.toString() &&
-        evals.eval_status === 'completed'
-      );
+//     const parser = new Parser({ 
+//       fields: [
+//         'Student_Name', 'Student_Email', 'Batch_ID', 'Total_Rewards', 
+//         'Exams_Completed', 'Total_Evaluations', 'Correct_Evaluations', 
+//         'Accuracy_Percentage', 'Last_Updated'
+//       ] 
+//     });
+//     const csv = parser.parse(csvData);
 
-      const correctEvaluations = evaluationsByStudent.filter(evals => 
-        evals.ticket === 0 &&
-        evals.evaluated_by &&
-        evals.evaluated_by.toString() === studentId.toString()
-      );
+//     res.header('Content-Type', 'text/csv');
+//     res.attachment(`Batch_${batchId}_Incentives.csv`);
+//     return res.send(csv);
 
-      let examRewards = 0;
-      if (studentParticipated) {
-        examRewards += PARTICIPATION_REWARD;
-      }
-      examRewards += correctEvaluations.length * CORRECT_EVALUATION_REWARD;
-
-      if (studentParticipated || evaluationsByStudent.length > 0) {
-        const incentiveRecord = await Incentivization.findOne({
-          batch: batchId,
-          student: studentId
-        });
-
-        if (incentiveRecord) {
-          incentiveRecord.total_rewards += examRewards;
-          incentiveRecord.exam_count += 1;
-          incentiveRecord.total_evaluations += evaluationsByStudent.length;
-          incentiveRecord.correct_evaluations += correctEvaluations.length;
-          incentiveRecord.last_updated = new Date();
-          await incentiveRecord.save();
-          
-          console.log(`Updated incentives for student ${enrollment.student.name}: +${examRewards} points (Total: ${incentiveRecord.total_rewards})`);
-        } else {
-          const newIncentive = await Incentivization.create({
-            batch: batchId,
-            student: studentId,
-            total_rewards: examRewards,
-            exam_count: 1,
-            total_evaluations: evaluationsByStudent.length,
-            correct_evaluations: correctEvaluations.length
-          });
-        }
-      }
-    }
-    return {
-      success: true,
-      message: 'Incentives calculated successfully!'
-    }
-
-  } catch (error) {
-    return {
-      success: false,
-      message: 'Failed to calculate incentives!'
-    };
-  }
-};
+//   } catch (error) {
+//     res.status(500).json({ message: 'Failed to generate incentives CSV!' });
+//   }
+// };
 
 export const downloadIncentivesCSV = async (req, res) => {
   const { batchId } = req.params;
@@ -1155,12 +1121,14 @@ export const downloadIncentivesCSV = async (req, res) => {
       Student_Name: incentive.student.name,
       Student_Email: incentive.student.email,
       Batch_ID: incentive.batch.batchId,
-      Total_Rewards: incentive.total_rewards,
+      Total_Rewards: incentive.total_rewards.toFixed(2),
       Exams_Completed: incentive.exam_count,
       Total_Evaluations: incentive.total_evaluations,
       Correct_Evaluations: incentive.correct_evaluations,
       Accuracy_Percentage: incentive.total_evaluations > 0 ? 
         ((incentive.correct_evaluations / incentive.total_evaluations) * 100).toFixed(2) : 0,
+      Average_Accuracy_Score: incentive.average_accuracy ? 
+        (incentive.average_accuracy * 100).toFixed(2) + '%' : 'N/A',
       Last_Updated: incentive.last_updated.toLocaleDateString()
     }));
 
@@ -1168,7 +1136,7 @@ export const downloadIncentivesCSV = async (req, res) => {
       fields: [
         'Student_Name', 'Student_Email', 'Batch_ID', 'Total_Rewards', 
         'Exams_Completed', 'Total_Evaluations', 'Correct_Evaluations', 
-        'Accuracy_Percentage', 'Last_Updated'
+        'Accuracy_Percentage', 'Average_Accuracy_Score', 'Last_Updated'
       ] 
     });
     const csv = parser.parse(csvData);

@@ -699,7 +699,6 @@ export default function TeacherDashboard() {
         showMessage(errorData.message, 'error');
       }
     } catch (error) {
-      console.error("Error downloading incentives:", error);
       showMessage(error.message || 'Failed to download incentives!', 'error');
     }
   };
