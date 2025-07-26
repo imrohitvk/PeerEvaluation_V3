@@ -21,6 +21,31 @@ import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
 import mongoose from 'mongoose';
 
+export const getDashboardStats = async (req, res) => {
+  try {
+    const teacherId = req.user._id;
+
+    const batches = await Batch.find({ instructor: teacherId });
+    
+    if (!batches || batches.length === 0) {
+      return res.status(200).json({ courses: 0, batches: 0, enrolledStudents: 0, activeExams: 0 });
+    }
+
+    const batchIds = batches.map(batch => batch._id);
+
+    const courseIds = [...new Set(batches.map(batch => batch.course))];
+
+    const enrolledStudents = await Enrollment.countDocuments({ batch: { $in: batchIds }, status: 'active' });
+
+    const activeExams = await Examination.countDocuments({ createdBy: teacherId, completed: false });
+
+    res.status(200).json({ courses: courseIds.length, batches: batches.length, enrolledStudents: enrolledStudents, activeExams: activeExams });
+
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({ message: 'Failed to fetch dashboard statistics!' });
+  }
+};
 
 export const assignTA = async (req, res) => {
   try {
