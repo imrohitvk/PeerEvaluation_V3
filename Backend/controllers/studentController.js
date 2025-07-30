@@ -222,7 +222,6 @@ export const getCompletedExams = async (req, res) => {
 
     const examsWithMarks = await Promise.all(
       completedExams.map(async (exam) => {
-        // Find all evaluations for this student for this exam
         const evaluations = await PeerEvaluation.find({
           exam: exam._id,
           student: studentId,
@@ -233,14 +232,11 @@ export const getCompletedExams = async (req, res) => {
         let totalEvaluations = evaluations.length;
 
         if (totalEvaluations > 0) {
-          // Calculate total marks for each evaluation and then average
           const evaluationTotals = evaluations.map(evaluation => {
-            // Sum all marks in the score array for each evaluation
             const totalMarksForEvaluation = evaluation.score.reduce((sum, mark) => sum + mark, 0);
             return totalMarksForEvaluation;
           });
 
-          // Calculate average of all evaluation totals
           const sumOfAllEvaluations = evaluationTotals.reduce((sum, total) => sum + total, 0);
           aggregateMarks = sumOfAllEvaluations / totalEvaluations;
         }

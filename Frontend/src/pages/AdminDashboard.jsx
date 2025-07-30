@@ -22,18 +22,24 @@ export default function AdminDashboard() {
       startDate: '',
       endDate: ''
   });
+  const [editCourseId, setEditCourseId] = useState('');
+  const [editCourseDetails, setEditCourseDetails] = useState({
+      courseId: '',
+      courseName: '',
+      openCourse: false,
+      startDate: '',
+      endDate: ''
+  });
   const [batchDetails, setBatchDetails] = useState({
     batchId: '',
     instructor: '',
     course: '' // Updated batchDetails state to include course field
-});
+  });
   const [counts, setCounts] = useState({ teachers: 0, courses: 0, students: 0 });
   const { setRefreshApp } = useContext(AppContext);
   const [courseId, setCourseId] = useState('');
   const [selectedBatchId, setSelectedBatchId] = useState('');
   const [batches, setBatches] = useState([]);
-
-
 
   useEffect(() => {
     // Remove body background, handled by container now
@@ -112,7 +118,6 @@ export default function AdminDashboard() {
     }
   };
 
-useEffect(() => {
   const fetchInstructors = async () => {
       try {
           const token = localStorage.getItem('token');
@@ -129,10 +134,10 @@ useEffect(() => {
       }
   };
 
-  fetchInstructors();
-}, []);
+  useEffect(() => {
+    fetchInstructors();
+  }, []);
 
-useEffect(() => {
   const fetchCourses = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -157,10 +162,10 @@ useEffect(() => {
     }
   };
 
-  fetchCourses();
-}, []);
+  useEffect(() => {
+    fetchCourses();
+  }, []);
 
-useEffect(() => {
   const fetchBatches = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -181,175 +186,251 @@ useEffect(() => {
     }
   };
 
-  fetchBatches();
-}, []);
+  useEffect(() => {
+    fetchBatches();
+  }, []);
 
-const handleCourseSubmit = async (event) => {
-  event.preventDefault();
+  const handleCourseSubmit = async (event) => {
+    event.preventDefault();
 
-  // Prepare the course data to send (ensure correct field names)
-  const courseData = {
-    courseId: courseDetails.courseId,
-    courseName: courseDetails.courseName,
-    openCourse: courseDetails.openCourse,
-    startDate: courseDetails.startDate,
-    endDate: courseDetails.endDate,
-  };
+    const courseData = {
+      courseId: courseDetails.courseId,
+      courseName: courseDetails.courseName,
+      openCourse: courseDetails.openCourse,
+      startDate: courseDetails.startDate,
+      endDate: courseDetails.endDate,
+    };
 
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5000/api/admin/add-course', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(courseData),
-    });
-
-    if (response.ok) {
-      showMessage('Course added successfully!', 'success');
-      setCourseDetails({
-        courseId: '',
-        courseName: '',
-        openCourse: false,
-        startDate: '',
-        endDate: ''
-      });
-      setTimeout(() => setRefreshApp(true), 500); // Adds a 500ms delay before refreshing the app
-    } else {
-      const data = await response.json();
-      showMessage(`Error: ${data.message || 'Failed to add course.'}`, 'error');
-    }
-  } catch (error) {
-    showMessage('An error occurred while adding the course.', 'error');
-    console.error(error);
-  }
-};
-
-const handleCourseDelete = async (event) => {
-  event.preventDefault();
-  // console.log('Selected courseId:', courseId); // Debugging
-  const courseData = {
-    courseId: courseId,
-  };
-
-  if (!courseData.courseId) {
-    showMessage('Please select a course to delete.', 'error');
-    return;
-  }
-
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:5000/api/admin/delete-course/${courseData.courseId}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      showMessage(data.message, 'success');
-      setCourses(courses.filter(course => course.id !== courseData.courseId));
-    } else {
-      const data = await response.json();
-      showMessage(`Error: ${data.message || 'Failed to delete course.'}`, 'error');
-    }
-  } catch (error) {
-    showMessage('An error occurred while deleting the course.', 'error');
-    // console.error(error);
-  }
-};
-
-const handleBatchSubmit = async (event) => {
-  event.preventDefault();
-
-  // Prepare the batch data to send (ensure correct field names)
-  const batchData = {
-    batchId: batchDetails.batchId,
-    instructor: batchDetails.instructor,
-    course: batchDetails.course,
-  };
-
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5000/api/admin/add-batch', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(batchData),
-    });
-
-    if (response.ok) {
-      showMessage('Batch added successfully!', 'success');
-      setBatchDetails({
-        batchId: '',
-        instructor: '',
-        course: '' // Reset course field
-      });
-      setTimeout(() => setRefreshApp(true), 500); // Adds a 500ms delay before refreshing the app
-    } else {
-      const data = await response.json();
-      showMessage(`Error! ${data.message || 'Failed to add batch.'}`, 'error');
-    }
-  } catch (error) {
-    showMessage('An error occurred while adding the batch.', 'error');
-    console.error(error);
-  }
-};
-
-const handleBatchDelete = async () => {
-  // console.log('Selected batchId:', selectedBatchId); // Debugging
-  if (!selectedBatchId) {
-    showMessage('Please select a batch to delete.', 'error');
-    return;
-  }
-
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:5000/api/admin/delete-batch/${selectedBatchId}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await response.json();
-    if (response.ok) {
-      showMessage(data.message, 'success');
-      setBatches(batches.filter(batch => batch._id !== selectedBatchId));
-      setSelectedBatchId('');
-    } else {
-      showMessage(data.message || 'Failed to delete batch.', 'error');
-    }
-  } catch (error) {
-    showMessage('An error occurred while deleting the batch.', 'error');
-  }
-};
-
-useEffect(() => {
-  const fetchCounts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/admin/dashboard-counts', {
-        method: 'GET',
+      const response = await fetch('http://localhost:5000/api/admin/add-course', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(courseData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage(data.message, 'success');
+        setCourseDetails({
+          courseId: '',
+          courseName: '',
+          openCourse: false,
+          startDate: '',
+          endDate: ''
+        });
+        fetchCourses();
+      } else {
+        showMessage(`Error: ${data.message || 'Failed to add course.'}`, 'error');
+      }
+    } catch (error) {
+      showMessage('An error occurred while adding the course.', 'error');
+    }
+  };
+
+  const handleEditCourseSelect = async (selectedCourseId) => {
+      setEditCourseId(selectedCourseId);
+      
+      if (!selectedCourseId) {
+          setEditCourseDetails({
+              courseId: '',
+              courseName: '',
+              openCourse: false,
+              startDate: '',
+              endDate: ''
+          });
+          return;
+      }
+
+      try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(`http://localhost:5000/api/admin/course/${selectedCourseId}`, {
+              method: 'GET',
+              headers: {
+                  Authorization: `Bearer ${token}`,
+              },
+          });
+
+          if (response.ok) {
+              const course = await response.json();
+              setEditCourseDetails({
+                  courseId: course.courseId,
+                  courseName: course.courseName,
+                  openCourse: course.openCourse,
+                  startDate: course.startDate ? course.startDate.split('T')[0] : '',
+                  endDate: course.endDate ? course.endDate.split('T')[0] : ''
+              });
+          } else {
+              showMessage('Failed to fetch course details!', 'error');
+          }
+      } catch (error) {
+          showMessage('Error fetching course details!', 'error');
+      }
+  };
+
+  const handleCourseUpdate = async (event) => {
+      event.preventDefault();
+
+      if (!editCourseId) {
+          showMessage('Please select a course to edit!', 'error');
+          return;
+      }
+
+      try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(`http://localhost:5000/api/admin/update-course/${editCourseId}`, {
+              method: 'PUT',
+              headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(editCourseDetails),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+              showMessage(data.message, 'success');
+              setEditCourseId('');
+              handleEditCourseSelect('');
+              fetchCourses();
+          } else {
+              showMessage(`Error: ${data.message || 'Failed to update course'}`, 'error');
+          }
+      } catch (error) {
+          showMessage('An error occurred while updating the course', 'error');
+      }
+  };
+
+  const handleCourseDelete = async (event) => {
+    event.preventDefault();
+    const courseData = {
+      courseId: courseId,
+    };
+
+    if (!courseData.courseId) {
+      showMessage('Please select a course to delete.', 'error');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/admin/delete-course/${courseData.courseId}`, {
+        method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      const data = await response.json();
-      setCounts(data);
+
+      if (response.ok) {
+        const data = await response.json();
+        showMessage(data.message, 'success');
+        fetchCourses();
+        handleEditCourseSelect();
+        // setCourses(courses.filter(course => course.id !== courseData.courseId));
+      } else {
+        const data = await response.json();
+        showMessage(`Error: ${data.message || 'Failed to delete course.'}`, 'error');
+      }
     } catch (error) {
-      console.error('Error fetching dashboard counts:', error);
+      showMessage('An error occurred while deleting the course.', 'error');
     }
   };
-  if (activeTab === 'home') {
-      fetchCounts();
+
+  const handleBatchSubmit = async (event) => {
+    event.preventDefault();
+
+    // Prepare the batch data to send (ensure correct field names)
+    const batchData = {
+      batchId: batchDetails.batchId,
+      instructor: batchDetails.instructor,
+      course: batchDetails.course,
+    };
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/admin/add-batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(batchData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage(data.message, 'success');
+        setBatchDetails({
+          batchId: '',
+          instructor: '',
+          course: '' // Reset course field
+        });
+        fetchBatches();
+        // setTimeout(() => setRefreshApp(true), 500); // Adds a 500ms delay before refreshing the app
+      } else {
+        showMessage(`Error! ${data.message || 'Failed to add batch.'}`, 'error');
+      }
+    } catch (error) {
+      showMessage('An error occurred while adding the batch.', 'error');
+      console.error(error);
     }
-}, [activeTab]);
+  };
+
+  const handleBatchDelete = async () => {
+    if (!selectedBatchId) {
+      showMessage('Please select a batch to delete!', 'error');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/admin/delete-batch/${selectedBatchId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        showMessage(data.message, 'success');
+        fetchBatches();
+        // setBatches(batches.filter(batch => batch._id !== selectedBatchId));
+        setSelectedBatchId('');
+      } else {
+        showMessage(data.message || 'Failed to delete batch.', 'error');
+      }
+    } catch (error) {
+      showMessage('An error occurred while deleting the batch!', 'error');
+    }
+  };
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:5000/api/admin/dashboard-counts', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        setCounts(data);
+      } catch (error) {
+        console.error('Error fetching dashboard counts:', error);
+      }
+    };
+    if (activeTab === 'home') {
+        fetchCounts();
+      }
+  }, [activeTab]);
 
 
   return (
@@ -523,7 +604,7 @@ useEffect(() => {
             <div style={{ display: 'flex', flexDirection: 'column', color: '#2d3559' }}>
               <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Role Manager</h2>
               <p style={{textAlign: 'left', color: '#3f3d56' }}>Update the role of a user by providing their email ID and selecting a role.</p>
-              <form onSubmit={handleRoleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+              <form onSubmit={handleRoleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', maxWidth: '900px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
                   <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }} htmlFor="email">Email ID</label>
                   <input
@@ -590,182 +671,379 @@ useEffect(() => {
           )}
           
           {activeTab === 'course' && (
-            <div className="course-manager" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-              <div className="add-course" style={{ width: '48%' }}>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Add New Course</h2>
-                <form onSubmit={handleCourseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="courseId">Course ID</label>
-                        <input
-                            type="text"
-                            id="courseId"
-                            name="courseId"
-                            placeholder="Enter course ID"
-                            value={courseDetails.courseId}
-                            onChange={(e) => setCourseDetails({ ...courseDetails, courseId: e.target.value })}
-                            style={{
-                                padding: '0.5rem',
-                                borderRadius: '12px',
-                                border: '1px solid  #5c5470',
-                                fontSize: '1rem',
-                                width: '300px',
-                                boxSizing: 'border-box',
-                                background: '#ffffff',
-                                color: ' #4b3c70',
-                            }}
-                        />
-                    </div>
+            <div style={{ width: '100%', minWidth: '1000px' }}>
+              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Course Manager</h2>
+              <div className="course-manager" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                <div className="add-course" style={{ width: '40%', border: '2px solid #5c5470', borderRadius: '15px' }}>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', textAlign: 'center', color: '#3f3d56' }}>Add New Course</h3>
+                  <form onSubmit={handleCourseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', margin: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', textAlign: 'left' }}>
+                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="courseId">Course ID</label>
+                          <input
+                              type="text"
+                              id="courseId"
+                              name="courseId"
+                              placeholder="Enter course ID"
+                              value={courseDetails.courseId}
+                              onChange={(e) => setCourseDetails({ ...courseDetails, courseId: e.target.value })}
+                              style={{
+                                  padding: '0.5rem',
+                                  borderRadius: '12px',
+                                  border: '1px solid  #5c5470',
+                                  fontSize: '1rem',
+                                  width: '200px',
+                                  boxSizing: 'border-box',
+                                  background: '#ffffff',
+                                  color: ' #4b3c70',
+                              }}
+                          />
+                      </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="courseName">Course Name</label>
-                        <input
-                            type="text"
-                            id="courseName"
-                            name="courseName"
-                            placeholder="Enter course name"
-                            value={courseDetails.courseName}
-                            onChange={(e) => setCourseDetails({ ...courseDetails, courseName: e.target.value })}
-                            style={{
-                                padding: '0.5rem',
-                                borderRadius: '12px',
-                                border: '1px solid  #5c5470',
-                                fontSize: '1rem',
-                                width: '300px',
-                                boxSizing: 'border-box',
-                                background: '#ffffff',
-                                color: ' #4b3c70',
-                            }}
-                        />
-                    </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', textAlign: 'left' }}>
+                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="courseName">Course Name</label>
+                          <input
+                              type="text"
+                              id="courseName"
+                              name="courseName"
+                              placeholder="Enter course name"
+                              value={courseDetails.courseName}
+                              onChange={(e) => setCourseDetails({ ...courseDetails, courseName: e.target.value })}
+                              style={{
+                                  padding: '0.5rem',
+                                  borderRadius: '12px',
+                                  border: '1px solid  #5c5470',
+                                  fontSize: '1rem',
+                                  width: '200px',
+                                  boxSizing: 'border-box',
+                                  background: '#ffffff',
+                                  color: ' #4b3c70',
+                              }}
+                          />
+                      </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="openCourse">Open Course</label>
-                        <input
-                            type="checkbox"
-                            id="openCourse"
-                            name="openCourse"
-                            checked={courseDetails.openCourse || false}
-                            onChange={(e) => setCourseDetails({ ...courseDetails, openCourse: e.target.checked })}
-                            style={{
-                                width: '20px',
-                                height: '20px',
-                                cursor: 'pointer',
-                                background: '#f0f0f0',
-                                border: '1px solid #5c5470',
-                                borderRadius: '4px',
-                            }}
-                        />
-                    </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', textAlign: 'left' }}>
+                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="openCourse">Open Course</label>
+                          <div style={{ position: 'relative', display: 'inline-block' }}>
+                            <input
+                                type="checkbox"
+                                id="openCourse"
+                                name="openCourse"
+                                checked={courseDetails.openCourse || false}
+                                onChange={(e) => setCourseDetails({ ...courseDetails, openCourse: e.target.checked })}
+                                style={{
+                                    width: '20px',
+                                    height: '20px',
+                                    cursor: 'pointer',
+                                    appearance: 'none',
+                                    WebkitAppearance: 'none',
+                                    MozAppearance: 'none',
+                                    background: courseDetails.openCourse ? '#4b3c70' : '#ffffff',
+                                    border: '2px solid #5c5470',
+                                    borderRadius: '4px',
+                                    outline: 'none',
+                                    transition: 'all 0.2s ease',
+                                }}
+                            />
+                            {courseDetails.openCourse && (
+                                <span style={{
+                                    position: 'absolute',
+                                    top: '1.5px',
+                                    left: '9px',
+                                    color: '#ffffff',
+                                    fontSize: '14px',
+                                    fontWeight: 'bold',
+                                    pointerEvents: 'none',
+                                    userSelect: 'none',
+                                }}>
+                                    ✓
+                                </span>
+                            )}
+                          </div>
+                      </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="startDate">Course Start Date</label>
-                        <input
-                            type="date"
-                            id="startDate"
-                            name="startDate"
-                            value={courseDetails.startDate || ''}
-                            onChange={(e) => setCourseDetails({ ...courseDetails, startDate: e.target.value })}
-                            style={{
-                                padding: '0.5rem',
-                                borderRadius: '12px',
-                                border: '1px solid  #5c5470',
-                                fontSize: '1rem',
-                                width: '300px',
-                                boxSizing: 'border-box',
-                                background: '#ffffff',
-                                color: ' #4b3c70',
-                                position: 'relative',
-                                zIndex: 9999,
-                            }}
-                        />
-                    </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', textAlign: 'left' }}>
+                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="startDate">Start Date</label>
+                          <input
+                              type="date"
+                              id="startDate"
+                              name="startDate"
+                              value={courseDetails.startDate || ''}
+                              onChange={(e) => setCourseDetails({ ...courseDetails, startDate: e.target.value })}
+                              style={{
+                                  padding: '0.5rem',
+                                  borderRadius: '12px',
+                                  border: '1px solid  #5c5470',
+                                  fontSize: '1rem',
+                                  width: '200px',
+                                  boxSizing: 'border-box',
+                                  background: '#ffffff',
+                                  color: ' #4b3c70',
+                                  position: 'relative',
+                                  colorScheme: 'auto',
+                                  // zIndex: 9999,
+                              }}
+                              onFocus={(e) => e.target.style.colorScheme = 'light'}
+                              onBlur={(e) => e.target.style.colorScheme = 'auto'}
+                          />
+                      </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="endDate">Course End Date</label>
-                        <input
-                            type="date"
-                            id="endDate"
-                            name="endDate"
-                            value={courseDetails.endDate || ''}
-                            onChange={(e) => setCourseDetails({ ...courseDetails, endDate: e.target.value })}
-                            style={{
-                                padding: '0.5rem',
-                                borderRadius: '12px',
-                                border: '1px solid  #5c5470',
-                                fontSize: '1rem',
-                                width: '300px',
-                                boxSizing: 'border-box',
-                                background: '#ffffff',
-                                color: ' #4b3c70',
-                                position: 'relative',
-                                zIndex: 9999,
-                            }}
-                        />
-                    </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', textAlign: 'left' }}>
+                          <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="endDate">End Date</label>
+                          <input
+                              type="date"
+                              id="endDate"
+                              name="endDate"
+                              value={courseDetails.endDate || ''}
+                              onChange={(e) => setCourseDetails({ ...courseDetails, endDate: e.target.value })}
+                              style={{
+                                  padding: '0.5rem',
+                                  borderRadius: '12px',
+                                  border: '1px solid  #5c5470',
+                                  fontSize: '1rem',
+                                  width: '200px',
+                                  boxSizing: 'border-box',
+                                  background: '#ffffff',
+                                  color: ' #4b3c70',
+                                  position: 'relative',
+                                  colorScheme: 'auto',
+                                  // zIndex: 9999,
+                              }}                        
+                          />
+                      </div>
 
-                    <div style={{ display: 'flex', width: '100%', marginLeft: '150px' }}>
-                        <button
-                            type="submit"
-                            style={{
-                                background: '#5c5470',
-                                border: 'none',
-                                color: '#fff',
-                                fontWeight: 600,
-                                fontSize: '1rem',
-                                padding: '0.5rem 1rem',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
-                                transition: 'background 0.2s',
-                            }}
-                        >
-                            Add Course
-                        </button>
-                    </div>
-                </form>
+                      <div style={{ display: 'flex', width: '100%', marginLeft: '100px' }}>
+                          <button
+                              type="submit"
+                              style={{
+                                  background: '#5c5470',
+                                  border: 'none',
+                                  color: '#fff',
+                                  fontWeight: 600,
+                                  fontSize: '1rem',
+                                  padding: '0.5rem 1rem',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
+                                  transition: 'background 0.2s',
+                              }}
+                          >
+                              Add Course
+                          </button>
+                      </div>
+                  </form>
+                </div>
+                
+                <div className="edit-course" style={{ width: '35%', marginLeft: '2rem', marginRight: '2rem', border: '2px solid #5c5470', borderRadius: '15px' }}>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Edit Course</h3>
+                  <div style={{ marginBottom: '2rem' }}>
+                      <label style={{ color: '#3f3d56', fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>Select Course to Edit</label>
+                      <select
+                          value={editCourseId}
+                          onChange={(e) => handleEditCourseSelect(e.target.value)}
+                          style={{
+                              padding: '0.5rem',
+                              borderRadius: '12px',
+                              border: '1px solid #5c5470',
+                              fontSize: '1rem',
+                              width: '90%',
+                              boxSizing: 'border-box',
+                              background: '#ffffff',
+                              color: '#4b3c70',
+                          }}
+                      >
+                          <option value="">Select Course</option>
+                          {courses.map((course) => (
+                              <option key={course.id} value={course.id}>
+                                  {course.courseId} - {course.name}
+                              </option>
+                          ))}
+                      </select>
+                  </div>
+
+                  {editCourseId && (
+                      <form onSubmit={handleCourseUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', textAlign: 'left', margin: '0.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                              <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '120px' }}>Course ID</label>
+                              <input
+                                  type="text"
+                                  value={editCourseDetails.courseId}
+                                  onChange={(e) => setEditCourseDetails({ ...editCourseDetails, courseId: e.target.value })}
+                                  style={{
+                                      padding: '0.5rem',
+                                      borderRadius: '12px',
+                                      border: '1px solid #5c5470',
+                                      fontSize: '1rem',
+                                      width: '180px',
+                                      boxSizing: 'border-box',
+                                      background: '#ffffff',
+                                      color: '#4b3c70',
+                                  }}
+                              />
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                              <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '120px' }}>Course Name</label>
+                              <input
+                                  type="text"
+                                  value={editCourseDetails.courseName}
+                                  onChange={(e) => setEditCourseDetails({ ...editCourseDetails, courseName: e.target.value })}
+                                  style={{
+                                      padding: '0.5rem',
+                                      borderRadius: '12px',
+                                      border: '1px solid #5c5470',
+                                      fontSize: '1rem',
+                                      width: '180px',
+                                      boxSizing: 'border-box',
+                                      background: '#ffffff',
+                                      color: '#4b3c70',
+                                  }}
+                              />
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                              <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '120px' }}>Open Course</label>
+                              <div style={{ position: 'relative', display: 'inline-block' }}>
+                                  <input
+                                      type="checkbox"
+                                      checked={editCourseDetails.openCourse || false}
+                                      onChange={(e) => setEditCourseDetails({ ...editCourseDetails, openCourse: e.target.checked })}
+                                      style={{
+                                          width: '20px',
+                                          height: '20px',
+                                          cursor: 'pointer',
+                                          appearance: 'none',
+                                          WebkitAppearance: 'none',
+                                          MozAppearance: 'none',
+                                          background: editCourseDetails.openCourse ? '#4b3c70' : '#ffffff',
+                                          border: '2px solid #5c5470',
+                                          borderRadius: '4px',
+                                          outline: 'none',
+                                          transition: 'all 0.2s ease',
+                                      }}
+                                  />
+                                  {editCourseDetails.openCourse && (
+                                      <span style={{
+                                          position: 'absolute',
+                                          top: '1.5px',
+                                          left: '9px',
+                                          color: '#ffffff',
+                                          fontSize: '14px',
+                                          fontWeight: 'bold',
+                                          pointerEvents: 'none',
+                                          userSelect: 'none',
+                                      }}>
+                                          ✓
+                                      </span>
+                                  )}
+                              </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                              <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '120px' }}>Start Date</label>
+                              <input
+                                  type="date"
+                                  value={editCourseDetails.startDate || ''}
+                                  onChange={(e) => setEditCourseDetails({ ...editCourseDetails, startDate: e.target.value })}
+                                  style={{
+                                      padding: '0.5rem',
+                                      borderRadius: '12px',
+                                      border: '1px solid #5c5470',
+                                      fontSize: '1rem',
+                                      width: '180px',
+                                      boxSizing: 'border-box',
+                                      background: '#ffffff',
+                                      color: '#4b3c70',
+                                      colorScheme: 'light',
+                                  }}
+                              />
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                              <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '120px' }}>End Date</label>
+                              <input
+                                  type="date"
+                                  value={editCourseDetails.endDate || ''}
+                                  onChange={(e) => setEditCourseDetails({ ...editCourseDetails, endDate: e.target.value })}
+                                  style={{
+                                      padding: '0.5rem',
+                                      borderRadius: '12px',
+                                      border: '1px solid #5c5470',
+                                      fontSize: '1rem',
+                                      width: '180px',
+                                      boxSizing: 'border-box',
+                                      background: '#ffffff',
+                                      color: '#4b3c70',
+                                      colorScheme: 'light',
+                                  }}
+                              />
+                          </div>
+
+                          <div style={{ display: 'flex', width: '100%', justifyContent: 'center', marginTop: '1rem' }}>
+                              <button
+                                  type="submit"
+                                  style={{
+                                      background: '#5c5470',
+                                      border: 'none',
+                                      color: '#fff',
+                                      fontWeight: 600,
+                                      fontSize: '1rem',
+                                      padding: '0.5rem 1rem',
+                                      borderRadius: '8px',
+                                      cursor: 'pointer',
+                                      boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
+                                      transition: 'background 0.2s',
+                                  }}
+                              >
+                                  Update Course
+                              </button>
+                          </div>
+                      </form>
+                  )}
               </div>
 
-              <div className="delete-course" style={{ width: '48%', textAlign: 'right' }}>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'right', color: '#3f3d56' }}>Delete Course</h2>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', width: '100%' }}>
-                  <select
-                    value={courseId}
-                    onChange={(e) => setCourseId(e.target.value)}
-                    style={{
-                      padding: '0.5rem',
-                      borderRadius: '12px',
-                      border: '1px solid #5c5470',
-                      fontSize: '1rem',
-                      width: '300px',
-                      boxSizing: 'border-box',
-                      background: '#ffffff',
-                      color: ' #4b3c70',
-                    }}
-                  >
-                    <option value="">Select Course</option>
-                    {courses.map((course) => (
-                      <option key={course.id} value={course.id}>
-                        {course.courseId} - {course.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={handleCourseDelete}
-                    style={{
-                      background: '#5c5470',
-                      border: 'none',
-                      color: '#fff',
-                      fontWeight: 600,
-                      fontSize: '1rem',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
-                      transition: 'background 0.2s',
-                    }}
-                  >
-                    Delete Course
-                  </button>
+                <div className="delete-course" style={{ width: '30%', textAlign: 'right', border: '2px solid #5c5470', borderRadius: '15px' }}>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Delete Course</h3>
+                  <div style={{ flexDirection: 'column', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', width: '100%', margin: '0.2rem', marginRight: '2rem' }}>
+                    <select
+                      value={courseId}
+                      onChange={(e) => setCourseId(e.target.value)}
+                      style={{
+                        padding: '0.5rem',
+                        borderRadius: '12px',
+                        border: '1px solid #5c5470',
+                        fontSize: '1rem',
+                        width: '200px',
+                        boxSizing: 'border-box',
+                        background: '#ffffff',
+                        color: ' #4b3c70',
+                      }}
+                    >
+                      <option value="">Select Course</option>
+                      {courses.map((course) => (
+                        <option key={course.id} value={course.id}>
+                          {course.courseId} - {course.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleCourseDelete}
+                      style={{
+                        background: '#5c5470',
+                        border: 'none',
+                        color: '#fff',
+                        fontWeight: 600,
+                        fontSize: '1rem',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
+                        transition: 'background 0.2s',
+                        width: '200px',
+                      }}
+                    >
+                      Delete Course
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
