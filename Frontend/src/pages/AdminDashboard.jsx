@@ -33,13 +33,19 @@ export default function AdminDashboard() {
   const [batchDetails, setBatchDetails] = useState({
     batchId: '',
     instructor: '',
-    course: '' // Updated batchDetails state to include course field
+    course: ''
   });
   const [counts, setCounts] = useState({ teachers: 0, courses: 0, students: 0 });
   const { setRefreshApp } = useContext(AppContext);
   const [courseId, setCourseId] = useState('');
   const [selectedBatchId, setSelectedBatchId] = useState('');
   const [batches, setBatches] = useState([]);
+  const [editBatchId, setEditBatchId] = useState('');
+  const [editBatchDetails, setEditBatchDetails] = useState({
+    batchId: '',
+    instructor: '',
+    course: ''
+  });
 
   useEffect(() => {
     // Remove body background, handled by container now
@@ -382,6 +388,76 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleEditBatchSelect = async (selectedBatchId) => {
+    setEditBatchId(selectedBatchId);
+    
+    if (!selectedBatchId) {
+      setEditBatchDetails({
+        batchId: '',
+        instructor: '',
+        course: ''
+      });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/admin/batch/${selectedBatchId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const batch = await response.json();
+        setEditBatchDetails({
+          batchId: batch.batchId,
+          instructor: batch.instructor._id,
+          course: batch.course._id
+        });
+      } else {
+        showMessage('Failed to fetch batch details!', 'error');
+      }
+    } catch (error) {
+      showMessage(error.message || 'An error occurred while fetching batch details!', 'error');
+    }
+  };
+
+  const handleBatchUpdate = async (event) => {
+    event.preventDefault();
+
+    if (!editBatchId) {
+      showMessage('Please select a batch to edit!', 'error');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/admin/update-batch/${editBatchId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(editBatchDetails),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage(data.message, 'success');
+        setEditBatchId('');
+        handleEditBatchSelect('');
+        fetchBatches();
+      } else {
+        showMessage(`Error: ${data.message || 'Failed to update batch!'}`, 'error');
+      }
+    } catch (error) {
+      showMessage(`Error: ${error.message || 'An error occurred while updating the batch!'}`, 'error');
+    }
+  };
+
   const handleBatchDelete = async () => {
     if (!selectedBatchId) {
       showMessage('Please select a batch to delete!', 'error');
@@ -401,6 +477,7 @@ export default function AdminDashboard() {
       if (response.ok) {
         showMessage(data.message, 'success');
         fetchBatches();
+        handleEditBatchSelect('');
         // setBatches(batches.filter(batch => batch._id !== selectedBatchId));
         setSelectedBatchId('');
       } else {
@@ -999,7 +1076,7 @@ export default function AdminDashboard() {
                           </div>
                       </form>
                   )}
-              </div>
+                </div>
 
                 <div className="delete-course" style={{ width: '30%', textAlign: 'right', border: '2px solid #5c5470', borderRadius: '15px' }}>
                   <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Delete Course</h3>
@@ -1050,89 +1127,253 @@ export default function AdminDashboard() {
           )}
 
           {activeTab === 'batch' && (
-            <div className="batch-manager" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-              
-              {/* Add Batch Section */}
-              <div className="add-batch" style={{ width: '48%' }}>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'left', color: '#3f3d56' }}>Add New Batch</h2>
-                <form onSubmit={handleBatchSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
-                  
-                  {/* Batch ID */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                    <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="batchId">Batch ID</label>
-                    <input
-                      type="text"
-                      id="batchId"
-                      name="batchId"
-                      placeholder="Enter batch ID"
-                      value={batchDetails.batchId}
-                      onChange={(e) => setBatchDetails({ ...batchDetails, batchId: e.target.value })}
-                      style={{
-                        padding: '0.5rem',
-                        borderRadius: '12px',
-                        border: '1px solid  #5c5470',
-                        fontSize: '1rem',
-                        width: '282px',
-                        background: '#ffffff',
-                        color: ' #4b3c70',
-                      }}
-                    />
-                  </div>
+            <div style={{ width: '100%', minWidth: '1000px' }}>
+              <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Batch Manager</h2>
+              <div className="batch-manager" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>              
+                <div className="add-batch" style={{ width: '35%', border: '2px solid #5c5470', borderRadius: '15px' }}>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Add New Batch</h3>
+                  <form onSubmit={handleBatchSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', marginBottom: '2rem', margin: '0.5rem', textAlign: 'left' }}>
+                    {/* Batch ID */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '90%' }}>
+                      <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '43%' }} htmlFor="batchId">Batch ID</label>
+                      <input
+                        type="text"
+                        id="batchId"
+                        name="batchId"
+                        placeholder="Enter batch ID"
+                        value={batchDetails.batchId}
+                        onChange={(e) => setBatchDetails({ ...batchDetails, batchId: e.target.value })}
+                        style={{
+                          padding: '0.5rem',
+                          borderRadius: '12px',
+                          border: '1px solid  #5c5470',
+                          fontSize: '1rem',
+                          width: '100%',
+                          background: '#ffffff',
+                          color: ' #4b3c70',
+                        }}
+                      />
+                    </div>
 
-                  {/* Instructor */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                    <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="instructor">Instructor</label>
+                    {/* Instructor */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '90%' }}>
+                      <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '40%' }} htmlFor="instructor">Instructor</label>
+                      <select
+                        id="instructor"
+                        name="instructor"
+                        value={batchDetails.instructor}
+                        onChange={(e) => setBatchDetails({ ...batchDetails, instructor: e.target.value })}
+                        style={{
+                          padding: '0.5rem',
+                          borderRadius: '12px',
+                          border: '1px solid #5c5470',
+                          fontSize: '1rem',
+                          width: '100%',
+                          background: '#ffffff',
+                          color: ' #4b3c70',
+                        }}
+                      >
+                        <option value="">Select Instructor</option>
+                        {instructors.map((instructor) => (
+                          <option key={instructor._id} value={instructor._id}>{instructor.name}({instructor.email})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Course */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '90%' }}>
+                      <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '40%' }} htmlFor="course">Course</label>
+                      <select
+                        id="course"
+                        name="course"
+                        value={batchDetails.course}
+                        onChange={(e) => setBatchDetails({ ...batchDetails, course: e.target.value })}
+                        style={{
+                          padding: '0.5rem',
+                          borderRadius: '12px',
+                          border: '1px solid #5c5470',
+                          fontSize: '1rem',
+                          width: '100%',
+                          background: '#ffffff',
+                          color: ' #4b3c70',
+                        }}
+                      >
+                        <option value="">Select Course</option>
+                        {courses.map((course) => (
+                          <option key={course.id} value={course.id}> {course.courseId} - {course.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div style={{ display: 'flex', width: '100%', justifyContent: 'center', marginTop: '1rem' }}>
+                      <button
+                        type="submit"
+                        style={{
+                          background: '#5c5470',
+                          border: 'none',
+                          color: '#fff',
+                          fontWeight: 600,
+                          fontSize: '1rem',
+                          padding: '0.5rem 1rem',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
+                          transition: 'background 0.2s',
+                        }}
+                      >
+                        Add Batch
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                <div className="edit-batch" style={{ width: '35%', marginLeft: '2rem', marginRight: '2rem', border: '2px solid #5c5470', borderRadius: '15px' }}>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Edit Batch</h3>
+                  <div style={{ marginBottom: '2rem' }}>
+                    <label style={{ color: '#3f3d56', fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>Select Batch to Edit</label>
                     <select
-                      id="instructor"
-                      name="instructor"
-                      value={batchDetails.instructor}
-                      onChange={(e) => setBatchDetails({ ...batchDetails, instructor: e.target.value })}
+                      value={editBatchId}
+                      onChange={(e) => handleEditBatchSelect(e.target.value)}
                       style={{
                         padding: '0.5rem',
                         borderRadius: '12px',
                         border: '1px solid #5c5470',
                         fontSize: '1rem',
-                        width: '300px',
+                        width: '90%',
+                        boxSizing: 'border-box',
                         background: '#ffffff',
-                        color: ' #4b3c70',
+                        color: '#4b3c70',
                       }}
                     >
-                      <option value="">Select Instructor</option>
-                      {instructors.map((instructor) => (
-                        <option key={instructor.id} value={instructor.id}>{instructor.name}</option>
+                      <option value="">Select Batch</option>
+                      {batches.map((batch) => (
+                        <option key={batch._id} value={batch._id}>
+                          {batch.batchId} - {batch.course.courseName} ({batch.instructor.name})
+                        </option>
                       ))}
                     </select>
                   </div>
 
-                  {/* Course */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                    <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px' }} htmlFor="course">Course</label>
+                  {editBatchId && (
+                    <form onSubmit={handleBatchUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', textAlign: 'left', margin: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '20%' }}>Batch ID</label>
+                        <input
+                          type="text"
+                          value={editBatchDetails.batchId}
+                          onChange={(e) => setEditBatchDetails({ ...editBatchDetails, batchId: e.target.value })}
+                          style={{
+                            padding: '0.5rem',
+                            borderRadius: '12px',
+                            border: '1px solid #5c5470',
+                            fontSize: '1rem',
+                            width: '70%',
+                            boxSizing: 'border-box',
+                            background: '#ffffff',
+                            color: '#4b3c70',
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '20%' }}>Instructor</label>
+                        <select
+                          value={editBatchDetails.instructor}
+                          onChange={(e) => setEditBatchDetails({ ...editBatchDetails, instructor: e.target.value })}
+                          style={{
+                            padding: '0.5rem',
+                            borderRadius: '12px',
+                            border: '1px solid #5c5470',
+                            fontSize: '1rem',
+                            width: '70%',
+                            boxSizing: 'border-box',
+                            background: '#ffffff',
+                            color: '#4b3c70',
+                          }}
+                        >
+                          <option value="">Select Instructor</option>
+                          {instructors.map((instructor) => (
+                            <option key={instructor._id} value={instructor._id}>
+                              {instructor.name}({instructor.email})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                        <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '20%' }}>Course</label>
+                        <select
+                          value={editBatchDetails.course}
+                          onChange={(e) => setEditBatchDetails({ ...editBatchDetails, course: e.target.value })}
+                          style={{
+                            padding: '0.5rem',
+                            borderRadius: '12px',
+                            border: '1px solid #5c5470',
+                            fontSize: '1rem',
+                            width: '70%',
+                            boxSizing: 'border-box',
+                            background: '#ffffff',
+                            color: '#4b3c70',
+                          }}
+                        >
+                          <option value="">Select Course</option>
+                          {courses.map((course) => (
+                            <option key={course.id} value={course.id}>
+                              {course.courseId} - {course.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div style={{ display: 'flex', width: '100%', justifyContent: 'center', marginTop: '1rem' }}>
+                        <button
+                          type="submit"
+                          style={{
+                            background: '#5c5470',
+                            border: 'none',
+                            color: '#fff',
+                            fontWeight: 600,
+                            fontSize: '1rem',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
+                            transition: 'background 0.2s',
+                          }}
+                        >
+                          Update Batch
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+
+                <div className="delete-batch" style={{ width: '25%', border: '2px solid #5c5470', borderRadius: '15px' }}>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Delete Batch</h3>
+                  <div style={{ flexDirection: 'column', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', width: '100%', margin: '0.5rem' }}>
                     <select
-                      id="course"
-                      name="course"
-                      value={batchDetails.course}
-                      onChange={(e) => setBatchDetails({ ...batchDetails, course: e.target.value })}
+                      value={selectedBatchId}
+                      onChange={(e) => setSelectedBatchId(e.target.value)}
                       style={{
                         padding: '0.5rem',
                         borderRadius: '12px',
                         border: '1px solid #5c5470',
                         fontSize: '1rem',
-                        width: '300px',
+                        width: '225px',
                         background: '#ffffff',
                         color: ' #4b3c70',
                       }}
                     >
-                      <option value="">Select Course</option>
-                      {courses.map((course) => (
-                        <option key={course.id} value={course.id}> {course.courseId} - {course.name}</option>
+                      <option value="">Select Batch</option>
+                      {batches.map((batch) => (
+                        <option key={batch._id} value={batch._id}>
+                          {batch.batchId} - {batch.course.courseName} ({batch.instructor.name})
+                        </option>
                       ))}
                     </select>
-                  </div>
-
-                  {/* Submit Button */}
-                  <div style={{ display: 'flex', width: '100%', marginLeft: '150px' }}>
                     <button
-                      type="submit"
+                      onClick={handleBatchDelete}
                       style={{
                         background: '#5c5470',
                         border: 'none',
@@ -1141,61 +1382,17 @@ export default function AdminDashboard() {
                         fontSize: '1rem',
                         padding: '0.5rem 1rem',
                         borderRadius: '8px',
+                        width: '225px',
                         cursor: 'pointer',
                         boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
                         transition: 'background 0.2s',
                       }}
                     >
-                      Add Batch
+                      Delete Batch
                     </button>
                   </div>
-                </form>
-              </div>
-
-              {/* Delete Batch Section */}
-              <div className="delete-batch" style={{ width: '48%', textAlign: 'right' }}>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'right', color: '#3f3d56' }}>Delete Batch</h2>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', width: '100%' }}>
-                  <select
-                    value={selectedBatchId}
-                    onChange={(e) => setSelectedBatchId(e.target.value)}
-                    style={{
-                      padding: '0.5rem',
-                      borderRadius: '12px',
-                      border: '1px solid #5c5470',
-                      fontSize: '1rem',
-                      width: '300px',
-                      background: '#ffffff',
-                      color: ' #4b3c70',
-                    }}
-                  >
-                    <option value="">Select Batch</option>
-                    {batches.map((batch) => (
-                      <option key={batch._id} value={batch._id}>
-                        {batch.batchId} - {batch.course.courseName} ({batch.instructor.name})
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={handleBatchDelete}
-                    style={{
-                      background: '#5c5470',
-                      border: 'none',
-                      color: '#fff',
-                      fontWeight: 600,
-                      fontSize: '1rem',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(60,60,120,0.12)',
-                      transition: 'background 0.2s',
-                    }}
-                  >
-                    Delete Batch
-                  </button>
                 </div>
               </div>
-
             </div>
           )}
 

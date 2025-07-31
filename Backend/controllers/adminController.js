@@ -134,8 +134,8 @@ export const updateCourse = async (req, res) => {
 export const getBatches = async (req, res) => {
   try {
     const batches = await Batch.find()
-      .populate('course', 'courseName')
-      .populate('instructor', 'name');
+      .populate('course')
+      .populate('instructor', '_id name email');
 
     res.status(200).json(batches);
   } catch (error) {
@@ -151,7 +151,7 @@ export const addBatch = async (req, res) => {
   }
 
   try {
-    const instructorData = await User.findOne({ name: instructor, role: 'teacher' });
+    const instructorData = await User.findById(instructor);
     if (!instructorData) {
       return res.status(404).json({ message: 'Instructor not found!' });
     }
@@ -173,6 +173,68 @@ export const addBatch = async (req, res) => {
   } catch (error) {
     console.error('Error adding batch:', error);
     res.status(500).json({ message: 'Server error. Please try again later!' });
+  }
+};
+
+export const getBatchById = async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    
+    const batch = await Batch.findById(batchId)
+      .populate('instructor', 'name email')
+      .populate('course', 'courseId courseName');
+    
+    if (!batch) {
+      return res.status(404).json({ message: 'Batch not found!' });
+    }
+    
+    res.status(200).json(batch);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error!', error: error });
+  }
+};
+
+export const updateBatch = async (req, res) => {
+  try {
+    const { editBatchId } = req.params;
+    const { batchId, instructor, course } = req.body;
+    
+    const existingBatch = await Batch.findById(editBatchId);
+    if (!existingBatch) {
+      return res.status(404).json({ message: 'Batch not found!' });
+    }
+
+    if (batchId !== existingBatch.batchId) {
+      const batchIdExists = await Batch.findOne({ batchId, course });
+      console.log('BatchIdExists:', batchIdExists);
+      if (batchIdExists) {
+        return res.status(400).json({ message: 'Batch with this ID already exists for the selected course!' });
+      }
+    }
+    
+    const instructorExists = await User.findById(instructor);
+    if (!instructorExists || instructorExists.role !== 'teacher') {
+      return res.status(400).json({ message: 'Invalid instructor selected!' });
+    }
+    
+    const courseExists = await Course.findById(course);
+    if (!courseExists) {
+      return res.status(400).json({ message: 'Invalid course selected!' });
+    }
+    
+    const updatedBatch = await Batch.findByIdAndUpdate(
+      editBatchId,
+      {
+        batchId,
+        instructor,
+        course
+      },
+      { new: true }
+    ).populate('instructor', 'name email').populate('course', 'courseId courseName');
+    
+    res.status(200).json({ message: 'Batch updated successfully!' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error!', error: error });
   }
 };
 
