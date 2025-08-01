@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { User } from '../models/User.js';
 import sendEmail from '../utils/sendEmail.js';
 import { Course } from '../models/Course.js';
-import emailExistence from 'email-existence';
+import emailValidator from 'email-validator';
 import { Batch } from '../models/Batch.js';
 
 // Generate JWT token
@@ -26,12 +26,7 @@ export const registerUser = async (req, res) => {
     }
 
     // Verify email existence
-    const emailIsValid = await new Promise((resolve) => {
-      emailExistence.check(email, (err, exists) => {
-        if (err) resolve(false);
-        else resolve(exists);
-      });
-    });
+    const emailIsValid = emailValidator.validate(email);
 
     if (!emailIsValid) {
       return res.status(400).json({ message: 'Email address does not exist or is invalid.' });
