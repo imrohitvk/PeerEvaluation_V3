@@ -10,6 +10,10 @@ const userSchema = new mongoose.Schema({
     required: true, default: 'student'
   },
   isTA: { type:Boolean, default:false },
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
   resetToken: {
     type: String,
     default: null
