@@ -148,7 +148,7 @@ export const sendVerificationCode = async (req, res) => {
 
     await sendEmail(email, 'Email Verification Code - Peer Evaluation System', verificationHtml);
 
-    console.log(`Verification code sent to ${email}: ${verificationCode}`);
+    // console.log(`Verification code sent to ${email}: ${verificationCode}`);
 
     res.status(200).json({
       message: 'Verification code sent to your email. Please check your inbox.',
@@ -263,10 +263,9 @@ export const verifyEmail = async (req, res) => {
       await sendEmail(user.email, 'Welcome to Peer Evaluation System! 🎉', welcomeHtml);
     } catch (emailError) {
       console.log('Welcome email failed to send:', emailError.message);
-      // Don't fail the registration if welcome email fails
     }
 
-    console.log(`User ${email} created and verified successfully`);
+    // console.log(`User ${email} created and verified successfully`);
 
     res.status(201).json({
       message: 'Email verified successfully! Registration completed.',
