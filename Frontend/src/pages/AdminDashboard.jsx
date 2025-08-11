@@ -678,7 +678,7 @@ export default function AdminDashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', color: '#2d3559' }}>
               <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Role Manager</h2>
               <p style={{ fontWeight: 'bold', textAlign: 'left', color: '#3f3d56' }}>Update the role of a user by providing their User Email ID and selecting a new role.</p>
-              <form onSubmit={handleRoleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '50%', maxWidth: '900px', border: '2px solid #5c5470', borderRadius: '12px', padding: '1rem', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+              <form onSubmit={handleRoleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '50%', maxWidth: '900px', border: '2px solid #5c5470', borderRadius: '12px', padding: '1rem', boxShadow: "0 4px 12px #4b3c70" }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
                   <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }} htmlFor="email">Email ID</label>
                   <input
@@ -751,7 +751,7 @@ export default function AdminDashboard() {
                 You can add new courses, view existing courses, update course details, and delete courses.
               </p>
               <div className="course-manager" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <div className="add-course" style={{ width: '40%', border: '2px solid #5c5470', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                <div className="add-course" style={{ width: '40%', border: '2px solid #5c5470', borderRadius: '15px', boxShadow: "0 4px 12px #4b3c70" }}>
                   <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', textAlign: 'center', color: '#3f3d56' }}>Add New Course</h3>
                   <form onSubmit={handleCourseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', margin: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', textAlign: 'left' }}>
@@ -908,7 +908,7 @@ export default function AdminDashboard() {
                   </form>
                 </div>
                 
-                <div className="edit-course" style={{ width: '35%', marginLeft: '2rem', marginRight: '2rem', border: '2px solid #5c5470', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                <div className="edit-course" style={{ width: '35%', marginLeft: '2rem', marginRight: '2rem', border: '2px solid #5c5470', borderRadius: '15px', boxShadow: "0 4px 12px #4b3c70" }}>
                   <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Edit Course</h3>
                   <div style={{ marginBottom: '2rem' }}>
                       <label style={{ color: '#3f3d56', fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>Select Course to Edit</label>
@@ -1076,7 +1076,7 @@ export default function AdminDashboard() {
                   )}
                 </div>
 
-                <div className="delete-course" style={{ width: '30%', textAlign: 'right', border: '2px solid #5c5470', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                <div className="delete-course" style={{ width: '30%', textAlign: 'right', border: '2px solid #5c5470', borderRadius: '15px', boxShadow: "0 4px 12px #4b3c70" }}>
                   <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Delete Course</h3>
                   <div style={{ flexDirection: 'column', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', width: '100%', margin: '0.2rem', marginRight: '2rem' }}>
                     <select
@@ -1131,7 +1131,7 @@ export default function AdminDashboard() {
                 You can add new batches, view existing batches, update batch details, and delete batches.
               </p>
               <div className="batch-manager" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>              
-                <div className="add-batch" style={{ width: '35%', border: '2px solid #5c5470', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                <div className="add-batch" style={{ width: '35%', border: '2px solid #5c5470', borderRadius: '15px', boxShadow: "0 4px 12px #4b3c70" }}>
                   <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Add New Batch</h3>
                   <form onSubmit={handleBatchSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', marginBottom: '2rem', margin: '0.5rem', textAlign: 'left' }}>
                     {/* Batch ID */}
@@ -1229,7 +1229,7 @@ export default function AdminDashboard() {
                   </form>
                 </div>
 
-                <div className="edit-batch" style={{ width: '35%', marginLeft: '2rem', marginRight: '2rem', border: '2px solid #5c5470', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                <div className="edit-batch" style={{ width: '35%', marginLeft: '2rem', marginRight: '2rem', border: '2px solid #5c5470', borderRadius: '15px', boxShadow: "0 4px 12px #4b3c70" }}>
                   <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Edit Batch</h3>
                   <div style={{ marginBottom: '2rem' }}>
                     <label style={{ color: '#3f3d56', fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>Select Batch to Edit</label>
@@ -1350,7 +1350,7 @@ export default function AdminDashboard() {
                   )}
                 </div>
 
-                <div className="delete-batch" style={{ width: '25%', border: '2px solid #5c5470', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                <div className="delete-batch" style={{ width: '25%', border: '2px solid #5c5470', borderRadius: '15px', boxShadow: "0 4px 12px #4b3c70" }}>
                   <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'center', color: '#3f3d56' }}>Delete Batch</h3>
                   <div style={{ flexDirection: 'column', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', width: '95%', margin: '0.5rem' }}>
                     <select
