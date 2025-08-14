@@ -86,9 +86,6 @@ body {
     padding: 1rem;
     transition: margin-left 0.3s;
     }
-    .admin-dashboard-main.sidebar-open {
-    /* Optionally add overlay effect or dim background */
-    }
 }
 @media (max-width: 600px) {
     .admin-dashboard-content {

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaChalkboardTeacher, FaBook, FaUserGraduate } from 'react-icons/fa';
-import '../styles/Admin/AdminDashboard.css'; // Assuming you have a CSS file for styles
-import { containerStyle, sidebarStyle, mainStyle, contentStyle, sectionHeading, buttonStyle } from '../styles/Admin/AdminDashboardStyles'; // Import styles
-import { showMessage } from '../utils/Message'; // Assuming you have a utility for showing messages
+import '../styles/Admin/AdminDashboard.css';
+import { containerStyle, sidebarStyle, mainStyle, contentStyle, sectionHeading, buttonStyle } from '../styles/Admin/AdminDashboardStyles';
+import { showMessage } from '../utils/Message';
 import { AppContext } from '../utils/AppContext';
 import { useContext } from 'react';
-import ProfileMenu from '../components/User/ProfileMenu'; // Assuming you have a ProfileMenu component
+import ProfileMenu from '../components/User/ProfileMenu';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('home');
@@ -14,7 +14,7 @@ export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const [instructors, setInstructors] = useState([]);
-  const [courses, setCourses] = useState([]); // New state for courses
+  const [courses, setCourses] = useState([]);
   const [courseDetails, setCourseDetails] = useState({
       courseId: '',
       courseName: '',
@@ -48,7 +48,6 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
-    // Remove body background, handled by container now
     document.body.style.background = '';
     document.body.style.margin = '0';
     document.body.style.minHeight = '100vh';
@@ -111,7 +110,7 @@ export default function AdminDashboard() {
         showMessage('Role updated successfully!', 'success');
         document.getElementById('email').value = '';
         document.getElementById('role').value = '';
-        setTimeout(() => setRefreshApp(true), 1000); // Adds a 1-second delay before refreshing the app
+        setTimeout(() => setRefreshApp(true), 1000);
       } else {
         showMessage(`Error! ${data.message || 'Failed to update role.'}`, 'error');
       }
@@ -150,7 +149,7 @@ export default function AdminDashboard() {
         },
       });
       const data = await response.json();
-      // Map backend fields to expected frontend fields
+      
       const mappedCourses = Array.isArray(data)
         ? data.map(course => ({
             id: course._id || course.id,
@@ -334,7 +333,6 @@ export default function AdminDashboard() {
         fetchCourses();
         fetchBatches();
         handleEditCourseSelect();
-        // setCourses(courses.filter(course => course.id !== courseData.courseId));
       } else {
         const data = await response.json();
         showMessage(`Error: ${data.message || 'Failed to delete course.'}`, 'error');
@@ -347,7 +345,6 @@ export default function AdminDashboard() {
   const handleBatchSubmit = async (event) => {
     event.preventDefault();
 
-    // Prepare the batch data to send (ensure correct field names)
     const batchData = {
       batchId: batchDetails.batchId,
       instructor: batchDetails.instructor,
@@ -372,10 +369,9 @@ export default function AdminDashboard() {
         setBatchDetails({
           batchId: '',
           instructor: '',
-          course: '' // Reset course field
+          course: ''
         });
         fetchBatches();
-        // setTimeout(() => setRefreshApp(true), 500); // Adds a 500ms delay before refreshing the app
       } else {
         showMessage(`Error! ${data.message || 'Failed to add batch.'}`, 'error');
       }
@@ -475,7 +471,6 @@ export default function AdminDashboard() {
         showMessage(data.message, 'success');
         fetchBatches();
         handleEditBatchSelect('');
-        // setBatches(batches.filter(batch => batch._id !== selectedBatchId));
         setSelectedBatchId('');
       } else {
         showMessage(data.message || 'Failed to delete batch.', 'error');
@@ -604,9 +599,9 @@ export default function AdminDashboard() {
       >
         <div className="admin-dashboard-content" style={{
           ...contentStyle,
-          background: 'rgba(255,255,255,0.92)', // subtle card background
-          boxShadow: '0 8px 32px rgba(60,60,120,0.18)', // slightly stronger shadow
-          border: '1.5px solid #e3e6f0', // soft border for contrast
+          background: 'rgba(255,255,255,0.92)',
+          boxShadow: '0 8px 32px rgba(60,60,120,0.18)',
+          border: '1.5px solid #e3e6f0',
           maxWidth: 'none',
           width: '100%',
           height: '80vh',
@@ -656,7 +651,6 @@ export default function AdminDashboard() {
                   onClick={() => navigate('/change-password')}
                   style={{
                     background: ' #5c5470',
-                    // background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
                     border: 'none',
                     color: '#fff',
                     fontWeight: 600,
@@ -691,10 +685,10 @@ export default function AdminDashboard() {
                       borderRadius: '12px',
                       border: '1px solid  #5c5470',
                       fontSize: '1rem',
-                      width: '300px', // Reduced width
+                      width: '300px',
                       boxSizing: 'border-box',
                       background: '#ffffff',
-                      color: ' #4b3c70', // Ensured text color is black
+                      color: ' #4b3c70',
                     }}
                   />
                 </div>
@@ -709,10 +703,10 @@ export default function AdminDashboard() {
                       borderRadius: '12px',
                       border: '1px solid #5c5470',
                       fontSize: '1rem',
-                      width: '300px', // Reduced width
+                      width: '300px',
                       boxSizing: 'border-box',
                       background: '#ffffff',
-                      color: ' #4b3c70', // Ensured text color is black
+                      color: ' #4b3c70',
                     }}
                   >
                     <option value="admin">Admin</option>
