@@ -405,19 +405,63 @@ export const getExamsForTeacher = async (req, res) => {
     const teacherId = req.user._id;
     const examss = await Examination.find({ createdBy: teacherId, completed: false })
       .populate({
-      path: 'batch',
-      select: 'batchId'
+        path: 'batch',
+        select: 'batchId'
       })
       .lean();
 
+    const batchIds = examss.map(exam => exam.batch?._id).filter(Boolean);
+    const examIds = examss.map(exam => exam._id);
+
+    const enrollmentCounts = await Enrollment.aggregate([
+      {
+        $match: {
+          batch: { $in: batchIds },
+          status: 'active'
+        }
+      },
+      {
+        $group: {
+          _id: '$batch',
+          studentCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const submissionCounts = await Document.aggregate([
+      {
+        $match: {
+          examId: { $in: examIds }
+        }
+      },
+      {
+        $group: {
+          _id: '$examId',
+          totalSubmissions: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const countMap = new Map();
+    enrollmentCounts.forEach(item => {
+      countMap.set(item._id.toString(), item.studentCount);
+    });
+
+    const submissionMap = new Map();
+    submissionCounts.forEach(item => {
+      submissionMap.set(item._id.toString(), item.totalSubmissions);
+    });
+
     const exams = examss.map(exam => ({
       ...exam,
-      batch: exam.batch ? exam.batch.batchId : null
+      batch: exam.batch ? exam.batch.batchId : null,
+      studentCount: exam.batch ? (countMap.get(exam.batch._id.toString()) || 0) : 0,
+      totalSubmissions: (submissionMap.get(exam._id.toString()) || 0)
     }));
 
     res.status(200).json({ exams });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch exams' });
+    res.status(500).json({ message: 'Failed to fetch exams!' });
   }
 };
 

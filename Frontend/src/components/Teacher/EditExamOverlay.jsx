@@ -10,7 +10,7 @@ const EditExamOverlay = ({ isOpen, exam, onClose, onSubmit }) => {
     duration: exam?.duration || '',
     totalMarks: exam?.totalMarks || '',
     k: exam?.k || '',
-    total_students: exam?.total_students || 10,
+    total_students: exam?.total_students || 0,
     solutions: null,
   });
 
@@ -49,7 +49,7 @@ const EditExamOverlay = ({ isOpen, exam, onClose, onSubmit }) => {
     if (exam) {
       setFormData((prev) => ({
         ...prev,
-        total_students: exam.total_students || '',
+        total_students: exam.total_students || 0,
       }));
     }
   }, [exam]);
@@ -98,7 +98,9 @@ const EditExamOverlay = ({ isOpen, exam, onClose, onSubmit }) => {
               value={formData.date}
               onChange={handleChange}
               required
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000', colorScheme: 'auto' }}
+              onFocus={(e) => e.target.style.colorScheme = 'light'}
+              onBlur={(e) => e.target.style.colorScheme = 'auto'}
             />
           </div>
 
@@ -110,7 +112,9 @@ const EditExamOverlay = ({ isOpen, exam, onClose, onSubmit }) => {
               value={formData.time}
               onChange={handleChange}
               required
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' }}
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000', colorScheme: 'auto' }}
+              onFocus={(e) => e.target.style.colorScheme = 'light'}
+              onBlur={(e) => e.target.style.colorScheme = 'auto'}
             />
           </div>
 
@@ -163,7 +167,7 @@ const EditExamOverlay = ({ isOpen, exam, onClose, onSubmit }) => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Total Students:</label>
+            <label style={{ color: '#3f3d56', fontWeight: 'bold', whiteSpace: 'nowrap', width: '150px', textAlign: 'left' }}>Total Attendees:</label>
             <input
               type="number"
               name="total_students"
