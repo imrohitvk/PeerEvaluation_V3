@@ -696,7 +696,12 @@ export const sendEvaluation = async (req, res) => {
 
   const exam = await Examination.findById(examId);
   if (!exam) {
-    return res.status(404).json({ message: 'Exam not found' });
+    return res.status(404).json({ message: 'Exam not found!' });
+  }
+
+  const totalDocuments = await Document.countDocuments({ examId });
+  if (exam.total_students !== totalDocuments) {
+    return res.status(400).json({ message: `Total students (${exam.total_students}) do not match total submissions (${totalDocuments}) for this exam.` });
   }
 
   try {
@@ -731,8 +736,14 @@ export const sendEvaluation = async (req, res) => {
       );
 
       if (eligibleEvaluators.length < exam.k) {
+        const uidMapEntry = uidMaps.find((uidMap) => uidMap.uniqueId === document.uniqueId);
+        let studentName = "Unknown";
+        if (uidMapEntry && uidMapEntry.userId) {
+          const studentUser = await User.findById(uidMapEntry.userId).select('name');
+          if (studentUser && studentUser.name) studentName = studentUser.name;
+        }
         return res.status(400).json({
-          message: `Not enough eligible evaluators for document ${document._id}. Constraints cannot be satisfied.`,
+          message: `Not enough eligible evaluators for documents of ${studentName}. Constraints cannot be satisfied.`,
         });
       }
 
